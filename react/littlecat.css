@@ -1,0 +1,78 @@
+/* ============================================
+   LittleCat —— 极简黑猫（v2 细致版）
+   ============================================ */
+
+.lcat {
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 闲置轻微呼吸（一直跑） */
+.lcat__breathe {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  animation: lcat-breathe 3.4s ease-in-out infinite;
+}
+
+/* 按下时整只猫 Q 弹地压扁再弹回（每次按下 key 变 → 重启动画） */
+.lcat__press {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  animation: lcat-press 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.lcat__svg {
+  display: block;
+  overflow: visible;
+}
+
+/* 眼睛白眼球跟随：弹簧式过渡（持续更新会产生追光标的 Q 弹效果） */
+.lcat__eye {
+  transition: transform 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 黑瞳孔跟随：更轻快，比白眼球略慢一拍，让眼神有"先转过去、瞳孔跟上"的感觉 */
+.lcat__pupil {
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 眨眼/形状变换都按 viewBox 坐标定位变换原点 */
+.lcat__blink,
+.lcat__shape {
+  transform-box: view-box;
+}
+
+/* 眼睛形状（月牙 ↔ 括号）每次挂载都 Q 弹地弹一下 */
+.lcat__shape {
+  animation: lcat-shape-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ============================================
+   Keyframes
+   ============================================ */
+
+/* 呼吸：轻微的纵向"鼓一下" */
+@keyframes lcat-breathe {
+  0%, 100% { transform: scaleY(1); }
+  50%      { transform: scaleY(1.028); }
+}
+
+/* 按下：先压扁，再过头回弹，最后稳住 */
+@keyframes lcat-press {
+  0%   { transform: scale(1, 1); }
+  28%  { transform: scale(1.07, 0.88); }
+  58%  { transform: scale(0.97, 1.06); }
+  80%  { transform: scale(1.01, 0.995); }
+  100% { transform: scale(1, 1); }
+}
+
+/* 眼睛形状弹入：从小弹大再稳 */
+@keyframes lcat-shape-pop {
+  0%   { transform: scale(0.5); }
+  60%  { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}

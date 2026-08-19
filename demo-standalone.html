@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>&lt;little-cat&gt; 独立运行测试</title>
+  <style>
+    body {
+      margin: 0; min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 48px;
+      background: linear-gradient(160deg, #f6f7fb, #e8ecf3);
+      font-family: system-ui, "Microsoft YaHei", sans-serif;
+    }
+    h1 { font-size: 15px; font-weight: 500; color: #667; }
+    .row { display: flex; align-items: flex-end; gap: 40px; }
+    p { font-size: 13px; color: #889; }
+  </style>
+  <!-- 唯一依赖：这一个文件 -->
+  <script src="./little-cat.js"></script>
+</head>
+<body>
+  <h1>零依赖 Web Component 版小黑猫 —— 直接 open 这个文件就能跑</h1>
+  <div class="row">
+    <little-cat size="280"></little-cat>
+    <little-cat size="160"></little-cat>
+    <little-cat size="90"></little-cat>
+  </div>
+  <p>移动鼠标看眼神跟随 · 按下变 &gt;&lt; · 闲置自动眨眼</p>
+</body>
+</html>
