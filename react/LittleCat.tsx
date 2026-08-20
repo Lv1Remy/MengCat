@@ -36,10 +36,9 @@ const RIGHT_EYE = { cx: 128, cy: 92, whiteR: 19, pupilR: 11 };
 export default function LittleCat({ size = 280, className = "" }: LittleCatProps) {
   const [pressed, setPressed] = useState(false);
   const [follow, setFollow] = useState({ x: 0, y: 0 });
-  /** 每次按下递增，让压感 squish 动画每次都重新触发 */
-  const [pressKey, setPressKey] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const pressRef = useRef<HTMLDivElement>(null);
   const leftBlinkRef = useRef<SVGGElement>(null);
   const rightBlinkRef = useRef<SVGGElement>(null);
   const rafRef = useRef<number | null>(null);
@@ -106,7 +105,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
     };
   }, []);
 
-  /* ============ 按下：Q弹压扁 + 眼睛变 >< ============ */
+  /* ============ 按下：快速压扁并保持，松开 Q 弹弹回 ============ */
   const onDown = useCallback(
     (e: ReactMouseEvent | ReactTouchEvent) => {
       e.preventDefault();
@@ -116,7 +115,9 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
       }
       pressedRef.current = true;
       setPressed(true);
-      setPressKey((k) => k + 1);
+      // 快速压扁并保持（CSS transition 0.13s ease-out 平滑过渡）
+      const el = pressRef.current;
+      if (el) el.style.transform = "scale(1.07, 0.88)";
     },
     []
   );
@@ -124,6 +125,24 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
   const onUp = useCallback(() => {
     if (!pressedRef.current) return;
     pressedRef.current = false;
+    // 松开后 Q 弹弹回（WAAPI：从压扁状态 overshoot 回正）
+    const el = pressRef.current;
+    if (el) {
+      el.style.transition = "none";
+      el.animate(
+        [
+          { transform: "scale(1.07, 0.88)" },
+          { transform: "scale(0.97, 1.06)", offset: 0.5 },
+          { transform: "scale(1.01, 0.995)", offset: 0.75 },
+          { transform: "scale(1, 1)" },
+        ],
+        { duration: 550, easing: "cubic-bezier(0.34,1.56,0.64,1)", fill: "forwards" }
+      ).onfinish = () => {
+        // 恢复默认 transition 和 transform，下次按下能正常过渡
+        el.style.transition = "";
+        el.style.transform = "";
+      };
+    }
     lingerRef.current = window.setTimeout(() => {
       setPressed(false);
       lingerRef.current = undefined;
@@ -205,7 +224,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
       onTouchEnd={onUp}
     >
       <div className="lcat__breathe">
-        <div className="lcat__press" key={pressKey}>
+        <div className="lcat__press" ref={pressRef}>
           <svg
             viewBox="0 0 200 175"
             width="100%"
