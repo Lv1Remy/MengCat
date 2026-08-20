@@ -10,7 +10,9 @@
  *
  * 行为：
  *   - 眼睛（白眼球+黑瞳孔分层）弹簧式跟随鼠标
- *   - 按下：眼睛变 > <（尖角朝中间）+ 整只猫 Q 弹压扁回弹
+ *   - 点击：眼睛变 > <（尖角朝中间）+ 整只猫 Q 弹压扁回弹
+ *   - 长按向上拖拽：把猫拉长（阻力渐增，越拉越拉不动），底部固定，
+ *     拖拽期间眼睛保持 > <；松手后 Q 弹甩回
  *   - 闲置 2.6~5s 随机眨眼；持续轻微呼吸
  *   - SVG 高斯模糊软边 + 宽墩剪影 + 小三角耳 + 双耳间平顶微拱
  *
@@ -24,6 +26,12 @@
   const BLINK_MIN = 2600;
   const BLINK_VAR = 2400;
   const RELEASE_LINGER = 320;
+  /* 长按拖拽拉长：超过该竖直位移才进入拖拽模式 */
+  const DRAG_THRESHOLD = 8;
+  /* 最大拉长量（scaleY 最高 1 + MAX_STRETCH） */
+  const MAX_STRETCH = 0.9;
+  /* 阻力系数：越大越拉不动（位移收益递减，渐近 MAX_STRETCH） */
+  const STRETCH_RESIST = 260;
   const EYES = {
     L: { cx: 72, cy: 92, whiteR: 19, pupilR: 11, bracket: "63,82 85,92 63,102" },
     R: { cx: 128, cy: 92, whiteR: 19, pupilR: 11, bracket: "137,82 115,92 137,102" },
@@ -137,27 +145,87 @@
           </div>
         </div>`;
 
-      /* 按下 / 松开：Q 弹 + >< */
+      /* ---------- 点击 Q 弹 / 长按拖拽拉长松手甩回 ---------- */
       const root = this.shadowRoot;
+      let startY = 0;        // 按下时指针 Y
+      let dragging = false;  // 是否已进入拉长模式
+
+      /** 阻力曲线：位移越大每像素增益越小，拉的越长越拉不动 */
+      const stretchOf = (dy) => MAX_STRETCH * (dy / (dy + STRETCH_RESIST));
+
+      /** 底部固定的拉长：纵向拉高、横向按体积守恒变细 */
+      const applyStretch = (p, dy) => {
+        const s = stretchOf(Math.max(0, dy));
+        p.style.transform = `scale(${1 / Math.sqrt(1 + s)}, ${1 + s})`;
+      };
+
+      const onDragMove = (ev) => {
+        if (!this._pressed) return;
+        const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
+        // 往上拖 = 拉长（提着猫头往上拽）
+        const dy = startY - y;
+        if (!dragging && dy > DRAG_THRESHOLD) {
+          dragging = true;
+          // 从点击弹跳切换为拉长：停掉 press 动画（下次按下会重启）
+          const p = root.querySelector("[data-press]");
+          if (p) p.style.animation = "none";
+        }
+        if (dragging) {
+          if (ev.cancelable) ev.preventDefault(); // 触屏上防止页面跟着滚
+          const p = root.querySelector("[data-press]");
+          if (p) applyStretch(p, dy);
+        }
+      };
+
       const down = (e) => {
         e.preventDefault();
         clearTimeout(this._linger);
         this._pressed = true;
-        // 重启 press 动画（none -> reflow -> 恢复）
+        dragging = false;
+        startY = e.touches ? e.touches[0].clientY : e.clientY;
+        // 先按普通点击处理：重启 press 动画（若随后拖拽会切换为拉长）
         const p = root.querySelector("[data-press]");
         p.style.animation = "none"; void p.offsetWidth; p.style.animation = "";
+        window.addEventListener("mousemove", onDragMove);
+        window.addEventListener("touchmove", onDragMove, { passive: false });
+        window.addEventListener("mouseup", up);
+        window.addEventListener("touchend", up);
         this._renderEyes();
       };
+
       const up = () => {
+        window.removeEventListener("mousemove", onDragMove);
+        window.removeEventListener("touchmove", onDragMove);
+        window.removeEventListener("mouseup", up);
+        window.removeEventListener("touchend", up);
         if (!this._pressed) return;
         this._pressed = false;
-        // 滞留 RELEASE_LINGER 再变回来，让短点击也能看清 ><
+        const p = root.querySelector("[data-press]");
+        if (dragging && p) {
+          // 拉长后松手：从当前状态多段 Q 弹甩回（压扁↔拉高来回衰减）
+          const from = getComputedStyle(p).transform;
+          p.style.transform = "";
+          p.animate(
+            [
+              { transform: from, easing: "cubic-bezier(0.2, 0.8, 0.35, 1)" },
+              { transform: "scale(1.08, 0.74)", offset: 0.2, easing: "ease-in-out" },
+              { transform: "scale(0.95, 1.14)", offset: 0.45, easing: "ease-in-out" },
+              { transform: "scale(1.03, 0.97)", offset: 0.68, easing: "ease-in-out" },
+              { transform: "scale(0.995, 1.01)", offset: 0.85, easing: "ease-in-out" },
+              { transform: "scale(1, 1)" },
+            ],
+            { duration: 800 }
+          );
+        }
+        dragging = false;
+        // 滞留一会儿再变回圆眼，让短点击也能看清 ><（拉长甩回给更长的滞留）
         clearTimeout(this._linger);
         this._linger = setTimeout(() => this._renderEyes(), RELEASE_LINGER);
       };
       this.onmousedown = down;
       this.onmouseup = up;
-      this.onmouseleave = up;
+      // 拖拽时指针会移出猫身范围，mouseleave 只在非拖拽时算松手
+      this.onmouseleave = () => { if (!dragging) up(); };
       this.ontouchstart = down;
       this.ontouchend = up;
     }

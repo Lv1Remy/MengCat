@@ -15,6 +15,12 @@ const BLINK_MIN = 2600;
 const BLINK_VAR = 2400;
 /** 松开后眼睛多滞留一会儿再变回月牙（让短点击也能"反应"到 ><） */
 const RELEASE_LINGER = 320;
+/* 长按拖拽拉长：超过该竖直位移才进入拖拽模式 */
+const DRAG_THRESHOLD = 8;
+/* 最大拉长量（scaleY 最高 1 + MAX_STRETCH） */
+const MAX_STRETCH = 0.9;
+/* 阻力系数：越大越拉不动（位移收益递减，渐近 MAX_STRETCH） */
+const STRETCH_RESIST = 260;
 
 /* 眼睛在 viewBox 里的基准位置 */
 const LEFT_EYE = { cx: 72, cy: 92, whiteR: 19, pupilR: 11 };
@@ -25,7 +31,9 @@ const RIGHT_EYE = { cx: 128, cy: 92, whiteR: 19, pupilR: 11 };
  *
  * 行为：
  *  - 眼睛跟着鼠标走（弹簧式跟随，越近越"认真看"）
- *  - 点击 / 按住：眼睛变成 > <，同时整只猫 Q 弹地一压一弹
+ *  - 点击：眼睛变 > <，同时整只猫 Q 弹地一压一弹
+ *  - 长按向上拖拽：把猫拉长（阻力渐增，越拉越拉不动），底部固定，
+ *    拖拽期间眼睛保持 > <，松手后 Q 弹甩回
  *  - 闲置每 2.6~5 秒自然眨一次眼
  *  - 持续轻微呼吸，按下时大幅 squish + overshoot 弹回
  *  - 软边：SVG 滤镜给剪影加一点点高斯模糊，模拟参考图手绘的柔边
@@ -40,12 +48,16 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
   const [pressKey, setPressKey] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const pressRef = useRef<HTMLDivElement>(null);
   const leftBlinkRef = useRef<SVGGElement>(null);
   const rightBlinkRef = useRef<SVGGElement>(null);
   const rafRef = useRef<number | null>(null);
   const blinkTimerRef = useRef<number | undefined>(undefined);
   const pressedRef = useRef(false);
   const lingerRef = useRef<number | undefined>(undefined);
+  /** 拖拽拉长状态（不进 state，直接操作 DOM 避免频繁重渲染） */
+  const dragStartYRef = useRef(0);
+  const draggingRef = useRef(false);
 
   /* ============ 眼神追踪：弹簧式跟随（白眼球平移，瞳孔相对眼球再追一点） ============ */
   useEffect(() => {
@@ -55,6 +67,8 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
         rafRef.current = null;
         const el = containerRef.current;
         if (!el) return;
+        // 按住/拖拽期间眼睛保持 ><，不跟随指针
+        if (pressedRef.current) return;
         const r = el.getBoundingClientRect();
         // 眼睛大致在猫头垂直中心略偏上
         const cx = r.left + r.width / 2;
@@ -106,7 +120,71 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
     };
   }, []);
 
-  /* ============ 按下：Q弹压扁 + 眼睛变 >< ============ */
+  /* ============ 拖拽核心：往上拖拉长（阻力渐增），底部固定 ============ */
+  const applyDrag = useCallback((clientY: number) => {
+    const el = pressRef.current;
+    if (!el) return;
+    // 往上拖 = 拉长（提着猫头往上拽）
+    const dy = dragStartYRef.current - clientY;
+    if (!draggingRef.current && dy > DRAG_THRESHOLD) {
+      draggingRef.current = true;
+      // 从点击弹跳切换为拉长：停掉 press 动画
+      el.style.animation = "none";
+    }
+    if (draggingRef.current) {
+      const d = Math.max(0, dy);
+      // 阻力曲线：位移越大每像素增益越小，拉的越长越拉不动
+      const s = (MAX_STRETCH * d) / (d + STRETCH_RESIST);
+      // 纵向拉高、横向按体积守恒变细（transform-origin 在底部，猫脚不动）
+      el.style.transform = `scale(${1 / Math.sqrt(1 + s)}, ${1 + s})`;
+    }
+  }, []);
+
+  const onDragMouseMove = useCallback(
+    (ev: MouseEvent) => applyDrag(ev.clientY),
+    [applyDrag]
+  );
+  const onDragTouchMove = useCallback(
+    (ev: TouchEvent) => {
+      if (ev.cancelable) ev.preventDefault(); // 防止页面跟着滚
+      applyDrag(ev.touches[0].clientY);
+    },
+    [applyDrag]
+  );
+
+  /* ============ 松手：拉长后多段 Q 弹甩回，眼睛滞留 >< ============ */
+  const onUp = useCallback(() => {
+    window.removeEventListener("mousemove", onDragMouseMove);
+    window.removeEventListener("touchmove", onDragTouchMove);
+    window.removeEventListener("mouseup", onUp);
+    window.removeEventListener("touchend", onUp);
+    if (!pressedRef.current) return;
+    pressedRef.current = false;
+    const el = pressRef.current;
+    if (draggingRef.current && el) {
+      // 拉长后松手：从当前状态多段 Q 弹甩回（压扁↔拉高来回衰减）
+      const from = getComputedStyle(el).transform;
+      el.style.transform = "";
+      el.animate(
+        [
+          { transform: from, easing: "cubic-bezier(0.2, 0.8, 0.35, 1)" },
+          { transform: "scale(1.08, 0.74)", offset: 0.2, easing: "ease-in-out" },
+          { transform: "scale(0.95, 1.14)", offset: 0.45, easing: "ease-in-out" },
+          { transform: "scale(1.03, 0.97)", offset: 0.68, easing: "ease-in-out" },
+          { transform: "scale(0.995, 1.01)", offset: 0.85, easing: "ease-in-out" },
+          { transform: "scale(1, 1)" },
+        ],
+        { duration: 800 }
+      );
+    }
+    draggingRef.current = false;
+    lingerRef.current = window.setTimeout(() => {
+      setPressed(false);
+      lingerRef.current = undefined;
+    }, RELEASE_LINGER);
+  }, [onDragMouseMove, onDragTouchMove]);
+
+  /* ============ 按下：先按普通点击弹跳处理，拖拽后切换为拉长 ============ */
   const onDown = useCallback(
     (e: ReactMouseEvent | ReactTouchEvent) => {
       e.preventDefault();
@@ -115,20 +193,19 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
         lingerRef.current = undefined;
       }
       pressedRef.current = true;
+      draggingRef.current = false;
+      dragStartYRef.current =
+        "touches" in e ? e.touches[0].clientY : e.clientY;
       setPressed(true);
       setPressKey((k) => k + 1);
+      // 拖拽时指针会移出猫身范围，监听挂在 window 上
+      window.addEventListener("mousemove", onDragMouseMove);
+      window.addEventListener("touchmove", onDragTouchMove, { passive: false });
+      window.addEventListener("mouseup", onUp);
+      window.addEventListener("touchend", onUp);
     },
-    []
+    [onDragMouseMove, onDragTouchMove, onUp]
   );
-
-  const onUp = useCallback(() => {
-    if (!pressedRef.current) return;
-    pressedRef.current = false;
-    lingerRef.current = window.setTimeout(() => {
-      setPressed(false);
-      lingerRef.current = undefined;
-    }, RELEASE_LINGER);
-  }, []);
 
   /** 单只眼睛：白眼球 + 黑瞳孔（瞳孔跟随） */
   const renderEye = (
@@ -194,18 +271,21 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
   };
 
   return (
+    // 拖拽时指针会移出猫身，所以 onMouseLeave 只在非拖拽时算松手
     <div
       ref={containerRef}
       className={`lcat ${className}`}
       style={{ width: size, height: (size * 175) / 200 }}
       onMouseDown={onDown}
       onMouseUp={onUp}
-      onMouseLeave={onUp}
+      onMouseLeave={() => {
+        if (!draggingRef.current) onUp();
+      }}
       onTouchStart={onDown}
       onTouchEnd={onUp}
     >
       <div className="lcat__breathe">
-        <div className="lcat__press" key={pressKey}>
+        <div className="lcat__press" key={pressKey} ref={pressRef}>
           <svg
             viewBox="0 0 200 175"
             width="100%"
