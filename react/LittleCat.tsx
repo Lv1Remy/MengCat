@@ -498,15 +498,15 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
             {renderEye(leftBlinkRef, LEFT_EYE, "L")}
             {renderEye(rightBlinkRef, RIGHT_EYE, "R")}
 
-            {/* 睡眠时右耳下方（红框位置）小幅度冒 Z，方向斜上很缓慢 */}
+            {/* 睡眠时右耳下方（红框位置）垂直向上小幅度冒 Z */}
             <g className="lcat__zzs" aria-hidden="true">
               <text className="lcat__zz" x="148" y="50">
                 Z
               </text>
-              <text className="lcat__zz lcat__zz--2" x="152" y="44">
+              <text className="lcat__zz lcat__zz--2" x="150" y="44">
                 Z
               </text>
-              <text className="lcat__zz lcat__zz--3" x="155" y="38">
+              <text className="lcat__zz lcat__zz--3" x="151" y="38">
                 Z
               </text>
             </g>

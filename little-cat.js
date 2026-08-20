@@ -66,7 +66,7 @@
     @keyframes breathe { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.028); } }
     @keyframes shape-pop { 0% { transform: scale(0.5); } 60% { transform: scale(1.14); } 100% { transform: scale(1); } }
 
-    /* ---------- 睡眠：Z 冒泡（从右耳下方红框位置小幅斜上飘，缓慢） ---------- */
+    /* ---------- 睡眠：Z 冒泡（从右耳下方红框位置垂直向上小飘，缓慢） ---------- */
     .zzs { opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
     :host(.lc-sleeping) .zzs { opacity: 1; }
     .zz { font: 700 13px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
@@ -77,7 +77,7 @@
     @keyframes zz-float {
       0%   { opacity: 0; transform: translate(0, 0) scale(0.75); }
       30%  { opacity: 0.9; }
-      100% { opacity: 0; transform: translate(3px, -7px) scale(1.1); }
+      100% { opacity: 0; transform: translate(1px, -8px) scale(1.1); }
     }
     /* 睡着后呼吸放缓 */
     :host(.lc-sleeping) .breathe { animation-duration: 5.6s; }
@@ -207,8 +207,8 @@
               ${eyeHTML("R", this._eyeState(), f.x, f.y)}
               <g class="zzs" aria-hidden="true">
                 <text class="zz" x="148" y="50">Z</text>
-                <text class="zz zz--2" x="152" y="44">Z</text>
-                <text class="zz zz--3" x="155" y="38">Z</text>
+                <text class="zz zz--2" x="150" y="44">Z</text>
+                <text class="zz zz--3" x="151" y="38">Z</text>
               </g>
             </svg>
           </div>
