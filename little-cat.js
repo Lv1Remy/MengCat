@@ -6,7 +6,7 @@
  *   <little-cat size="200"></little-cat>
  *
  * 属性：
- *   size  显示宽度 px，默认 200（高度按 200:175 自动等比）
+ *   size  显示宽度 px，默认 200（高度按 200:148 自动等比，猫底边贴容器底）
  *
  * 行为：
  *   - 眼睛（白眼球+黑瞳孔分层）弹簧式跟随鼠标
@@ -126,13 +126,15 @@
     /* ---------- 构建 DOM ---------- */
     _build() {
       const size = this.size;
-      const height = Math.round((size * 175) / 200);
+      // 高度比例 = viewBox 高 148 / 宽 200：黑底边 y=148 恰好贴住容器底，
+      // 这样 transform-origin 50% 100% 缩放时黑色部分底部不会上漂
+      const height = Math.round((size * 148) / 200);
       const f = this._follow;
       this.shadowRoot.innerHTML = `
         <style>${CSS}</style>
         <div class="breathe" style="width:${size}px;height:${height}px">
           <div class="press" data-press>
-            <svg viewBox="0 0 200 175" xmlns="http://www.w3.org/2000/svg" aria-label="小黑猫">
+            <svg viewBox="0 0 200 148" xmlns="http://www.w3.org/2000/svg" aria-label="小黑猫">
               <defs>
                 <filter id="lc-soft" x="-5%" y="-5%" width="110%" height="110%">
                   <feGaussianBlur stdDeviation="0.4"/>
@@ -238,7 +240,7 @@
           this._raf = null;
           const r = this.getBoundingClientRect();
           const cx = r.left + r.width / 2;
-          const cy = r.top + r.height * 0.52;
+          const cy = r.top + r.height * 0.62;
           const dx = e.clientX - cx;
           const dy = e.clientY - cy;
           const dist = Math.hypot(dx, dy) || 1;

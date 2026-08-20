@@ -3,7 +3,7 @@ import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } fro
 import "./littlecat.css";
 
 interface LittleCatProps {
-  /** 显示尺寸（px，宽高按 viewBox 200:175 等比） */
+  /** 显示尺寸（px，宽高按 viewBox 200:148 等比，猫底边贴容器底） */
   size?: number;
   className?: string;
 }
@@ -72,7 +72,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
         const r = el.getBoundingClientRect();
         // 眼睛大致在猫头垂直中心略偏上
         const cx = r.left + r.width / 2;
-        const cy = r.top + r.height * 0.52;
+        const cy = r.top + r.height * 0.62; // 眼睛在 92/148 ≈ 62% 高度处
         const dx = e.clientX - cx;
         const dy = e.clientY - cy;
         const dist = Math.hypot(dx, dy) || 1;
@@ -275,7 +275,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
     <div
       ref={containerRef}
       className={`lcat ${className}`}
-      style={{ width: size, height: (size * 175) / 200 }}
+      style={{ width: size, height: (size * 148) / 200 }}
       onMouseDown={onDown}
       onMouseUp={onUp}
       onMouseLeave={() => {
@@ -287,7 +287,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
       <div className="lcat__breathe">
         <div className="lcat__press" key={pressKey} ref={pressRef}>
           <svg
-            viewBox="0 0 200 175"
+            viewBox="0 0 200 148"
             width="100%"
             height="100%"
             xmlns="http://www.w3.org/2000/svg"
