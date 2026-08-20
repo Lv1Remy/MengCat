@@ -25,8 +25,8 @@ const STRETCH_RESIST = 260;
 const MAX_LEAN = 24;
 /* 斜切阻力系数：越大越甩不动 */
 const LEAN_RESIST = 220;
-/* 闲置多久后进入睡眠（毫秒），默认 60000；DEV 临时改 5000 测入睡 */
-const SLEEP_AFTER = 5000;
+/* 闲置多久后进入睡眠（毫秒） */
+const SLEEP_AFTER = 60000;
 
 /* 眼睛在 viewBox 里的基准位置 */
 const LEFT_EYE = { cx: 72, cy: 92, whiteR: 19, pupilR: 11 };

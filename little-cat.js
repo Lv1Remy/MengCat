@@ -41,8 +41,8 @@
   const MAX_LEAN = 24;
   /* 斜切阻力系数：越大越甩不动 */
   const LEAN_RESIST = 220;
-  /* 闲置多久后进入睡眠（毫秒），默认 60000；DEV 临时改 5000 测入睡 */
-  const SLEEP_AFTER = 5000;
+  /* 闲置多久后进入睡眠（毫秒） */
+  const SLEEP_AFTER = 60000;
   const EYES = {
     L: { cx: 72, cy: 92, whiteR: 19, pupilR: 11, bracket: "63,82 85,92 63,102" },
     R: { cx: 128, cy: 92, whiteR: 19, pupilR: 11, bracket: "137,82 115,92 137,102" },
