@@ -73,10 +73,11 @@
     :host(.lc-sleeping) .zzs { opacity: 1; }
     .zz { font: 700 24px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
           opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; }
-    /* 一颗一颗冒：每颗存活 2.4s，错开 2.4s，同一时刻只有一颗在飘 */
-    :host(.lc-sleeping) .zz { animation: zz-float 2.4s ease-in-out infinite; }
-    :host(.lc-sleeping) .zz--2 { animation-delay: 2.4s; }
-    :host(.lc-sleeping) .zz--3 { animation-delay: 4.8s; }
+    /* 每 1s 冒出一颗新 Z：每颗存活 3s、错开 0/1/2s，
+       任意时刻三颗在空中排成错开的竖链 */
+    :host(.lc-sleeping) .zz { animation: zz-float 3s ease-in-out infinite; }
+    :host(.lc-sleeping) .zz--2 { animation-delay: 1s; }
+    :host(.lc-sleeping) .zz--3 { animation-delay: 2s; }
     @keyframes zz-float {
       0%   { opacity: 0; transform: translate(0, 0) scale(0.75); }
       30%  { opacity: 0.9; }
