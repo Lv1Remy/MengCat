@@ -214,6 +214,14 @@
         }
       };
 
+      /** 指针移出窗口（relatedTarget 为空）或窗口失焦：自动当松手处理，
+       *  否则窗口外的 mouseup 收不到，猫会卡在拉伸状态 */
+      const outOfWindow = (ev) => {
+        if (!this._pressed) return;
+        if (ev.type === "mouseout" && ev.relatedTarget) return; // 只是移到了窗口内其他元素上
+        up();
+      };
+
       const down = (e) => {
         e.preventDefault();
         clearTimeout(this._linger);
@@ -237,6 +245,8 @@
         window.addEventListener("touchmove", onDragMove, { passive: false });
         window.addEventListener("mouseup", up);
         window.addEventListener("touchend", up);
+        document.addEventListener("mouseout", outOfWindow);
+        window.addEventListener("blur", outOfWindow);
         this._renderEyes();
       };
 
@@ -245,6 +255,8 @@
         window.removeEventListener("touchmove", onDragMove);
         window.removeEventListener("mouseup", up);
         window.removeEventListener("touchend", up);
+        document.removeEventListener("mouseout", outOfWindow);
+        window.removeEventListener("blur", outOfWindow);
         if (!this._pressed) return;
         this._pressed = false;
         const p = root.querySelector("[data-press]");

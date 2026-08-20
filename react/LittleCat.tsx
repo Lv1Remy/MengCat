@@ -202,6 +202,8 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
     window.removeEventListener("touchmove", onDragTouchMove);
     window.removeEventListener("mouseup", onUp);
     window.removeEventListener("touchend", onUp);
+    document.removeEventListener("mouseout", onOutOfWindow as EventListener);
+    window.removeEventListener("blur", onOutOfWindow);
     if (!pressedRef.current) return;
     pressedRef.current = false;
     const el = pressRef.current;
@@ -260,6 +262,17 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
     }, RELEASE_LINGER);
   }, [onDragMouseMove, onDragTouchMove]);
 
+  /* ============ 指针出窗口/窗口失焦：自动当松手（否则外部 mouseup 收不到，猫卡在拉伸状态） ============ */
+  const onOutOfWindow = useCallback(
+    (ev: MouseEvent | FocusEvent) => {
+      if (!pressedRef.current) return;
+      // mouseout 且有 relatedTarget = 只是移到窗口内其他元素，不算出窗口
+      if (ev.type === "mouseout" && (ev as MouseEvent).relatedTarget) return;
+      onUp();
+    },
+    [onUp]
+  );
+
   /* ============ 按下：只记录起点 + 眼睛变 ><（弹跳延迟到松手时） ============ */
   const onDown = useCallback(
     (e: ReactMouseEvent | ReactTouchEvent) => {
@@ -290,8 +303,11 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
       window.addEventListener("touchmove", onDragTouchMove, { passive: false });
       window.addEventListener("mouseup", onUp);
       window.addEventListener("touchend", onUp);
+      // 指针拖出窗口或窗口失焦时自动松手
+      document.addEventListener("mouseout", onOutOfWindow as EventListener);
+      window.addEventListener("blur", onOutOfWindow);
     },
-    [onDragMouseMove, onDragTouchMove, onUp]
+    [onDragMouseMove, onDragTouchMove, onUp, onOutOfWindow]
   );
 
   /** 单只眼睛：白眼球 + 黑瞳孔（瞳孔跟随） */
