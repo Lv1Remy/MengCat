@@ -78,13 +78,13 @@
 /* 动画只在入睡时挂上：入睡瞬间从 0% 重新开始，Z 依次"冒出来"，
    而不是入睡前就已在循环中途 */
 .lcat--sleeping .lcat__zz {
-  /* 每 1.5s 冒出一颗新 Z：每颗存活 4.5s、错开 0/1.5/3s，
+  /* 每 2s 冒出一颗新 Z：每颗存活 6s、错开 0/2/4s，
      任意时刻三颗在空中排成错开的竖链 */
-  animation: lcat-zz-float 4.5s ease-in-out infinite;
+  animation: lcat-zz-float 6s ease-in-out infinite;
 }
 
-.lcat--sleeping .lcat__zz--2 { animation-delay: 1.5s; }
-.lcat--sleeping .lcat__zz--3 { animation-delay: 3s; }
+.lcat--sleeping .lcat__zz--2 { animation-delay: 2s; }
+.lcat--sleeping .lcat__zz--3 { animation-delay: 4s; }
 
 /* Z 从右耳下方红框位置垂直向上小飘、缓慢淡出（纯竖直，无横向位移） */
 @keyframes lcat-zz-float {
