@@ -80,7 +80,7 @@
     @keyframes zz-float {
       0%   { opacity: 0; transform: translate(0, 0) scale(0.75); }
       30%  { opacity: 0.9; }
-      100% { opacity: 0; transform: translate(0, -8px) scale(1.1); }
+      100% { opacity: 0; transform: translate(0, -16px) scale(1.1); }
     }
     /* 睡着后呼吸放缓 */
     :host(.lc-sleeping) .breathe { animation-duration: 5.6s; }
