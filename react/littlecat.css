@@ -17,12 +17,11 @@
   animation: lcat-breathe 3.4s ease-in-out infinite;
 }
 
-/* 点击弹跳：松手时若未拖拽，JS 重启该动画让猫 Q 弹地一压一弹 */
+/* 点击弹跳：松手时若未拖拽，JS 用 WAAPI 从当前形态无缝 Q 弹地一压一弹 */
 .lcat__press {
   width: 100%;
   height: 100%;
   transform-origin: 50% 100%;
-  animation: lcat-press 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .lcat__svg {
@@ -59,15 +58,6 @@
 @keyframes lcat-breathe {
   0%, 100% { transform: scaleY(1); }
   50%      { transform: scaleY(1.028); }
-}
-
-/* 按下：先压扁，再过头回弹，最后稳住 */
-@keyframes lcat-press {
-  0%   { transform: scale(1, 1); }
-  28%  { transform: scale(1.07, 0.88); }
-  58%  { transform: scale(0.97, 1.06); }
-  80%  { transform: scale(1.01, 0.995); }
-  100% { transform: scale(1, 1); }
 }
 
 /* 眼睛形状弹入：从小弹大再稳 */

@@ -53,18 +53,37 @@
             -webkit-tap-highlight-color: transparent; }
     .breathe { width: 100%; height: 100%; transform-origin: 50% 100%;
                animation: breathe 3.4s ease-in-out infinite; }
-    .press { width: 100%; height: 100%; transform-origin: 50% 100%;
-             animation: press 0.55s cubic-bezier(0.34,1.56,0.64,1); }
+    .press { width: 100%; height: 100%; transform-origin: 50% 100%; }
     svg { display: block; overflow: visible; width: 100%; height: 100%; }
     .eye { transition: transform 0.36s cubic-bezier(0.34,1.56,0.64,1); }
     .shape { transform-box: view-box;
              animation: shape-pop 0.42s cubic-bezier(0.34,1.56,0.64,1); }
     @keyframes breathe { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.028); } }
-    @keyframes press { 0% { transform: scale(1,1); } 28% { transform: scale(1.07,0.88); }
-                       58% { transform: scale(0.97,1.06); } 80% { transform: scale(1.01,0.995); }
-                       100% { transform: scale(1,1); } }
     @keyframes shape-pop { 0% { transform: scale(0.5); } 60% { transform: scale(1.14); } 100% { transform: scale(1); } }
   `;
+
+  /* 弹簧缓动 */
+  const SPRING = "cubic-bezier(0.34,1.56,0.64,1)";
+
+  /**
+   * Q 弹压扁回弹（WAAPI）。
+   * from 传入当前实时 transform（动画/过渡中的插值态），从该状态无缝接续；
+   * 播放前取消旧动画 —— 上一个弹跳没播完就再次触发时不会叠加/突跳。
+   */
+  function bounce(p, from) {
+    const start = from || getComputedStyle(p).transform;
+    p.getAnimations().forEach((a) => a.cancel());
+    p.animate(
+      [
+        { transform: start && start !== "none" ? start : "scale(1, 1)", easing: SPRING },
+        { transform: "scale(1.07, 0.88)", offset: 0.28, easing: SPRING },
+        { transform: "scale(0.97, 1.06)", offset: 0.58, easing: SPRING },
+        { transform: "scale(1.01, 0.995)", offset: 0.8, easing: SPRING },
+        { transform: "scale(1, 1)" },
+      ],
+      { duration: 550 }
+    );
+  }
 
   /** 按下时的 >< 括号 */
   function bracketHTML(side) {
@@ -153,6 +172,9 @@
           </div>
         </div>`;
 
+      // 入场：Q 弹一下
+      bounce(this.shadowRoot.querySelector("[data-press]"));
+
       /* ---------- 点击（松手时弹）/ 长按拖拽拉长松手甩回 ---------- */
       const root = this.shadowRoot;
       let startX = 0;       // 按下时指针 X
@@ -183,13 +205,7 @@
         const dx = t.clientX - startX;
         if (!dragging && (dy > DRAG_THRESHOLD || Math.abs(dx) > DRAG_THRESHOLD)) {
           dragging = true;
-          const p = root.querySelector("[data-press]");
-          if (p) {
-            // 检测到拖拽：停掉点击 Q 弹动画；同时加一小段 transform 过渡，
-            // 从 Q 弹中途状态平滑接管到拖拽变形，避免突跳卡顿
-            p.style.animation = "none";
-            p.style.transition = "transform 0.13s ease-out";
-          }
+          // 平滑接管过渡已在 down 时挂好，这里无需额外处理
         }
         if (dragging) {
           if (ev.cancelable) ev.preventDefault(); // 触屏上防止页面跟着滚
@@ -208,6 +224,14 @@
         const t = e.touches ? e.touches[0] : e;
         startX = t.clientX;
         startY = t.clientY;
+        const p = root.querySelector("[data-press]");
+        if (p) {
+          // 掐掉上一次没播完的弹跳/回摆，挂短过渡让猫从当前形态平滑收形，
+          // 不再出现"半路掐断动画 → 跳回基础形态"的卡顿
+          p.getAnimations().forEach((a) => a.cancel());
+          p.style.transition = "transform 0.13s ease-out";
+          p.style.transform = "";
+        }
         // 按下不播动画（弹跳延迟到松手时），只记录起点、切换眼睛为 ><
         window.addEventListener("mousemove", onDragMove);
         window.addEventListener("touchmove", onDragMove, { passive: false });
@@ -224,16 +248,19 @@
         if (!this._pressed) return;
         this._pressed = false;
         const p = root.querySelector("[data-press]");
+        // 先取实时形态（含过渡/旧动画插值），再清过渡 —— 之后的新动画从该状态无缝接续
+        const cur = p ? getComputedStyle(p).transform : null;
         if (p) p.style.transition = ""; // 拖拽的平滑接管过渡用完即清，不影响后续动画
         if (dragging && p) {
           // 拖拽后松手：从当前状态多段 Q 弹甩回 —— 左右斜切回摆衰减 + 压扁↔拉高震荡
           // （正角=向右歪；skewX 参数取负，见 applyStretch）
-          const from = getComputedStyle(p).transform;
           const a = lastAng, s = lastS;
+          p.getAnimations().forEach((an) => an.cancel()); // 上一次回摆没播完时不叠加
           p.style.transform = "";
           p.animate(
             [
-              { transform: from, easing: "cubic-bezier(0.2, 0.8, 0.35, 1)" },
+              { transform: cur && cur !== "none" ? cur : "skewX(0deg) scale(1, 1)",
+                easing: "cubic-bezier(0.2, 0.8, 0.35, 1)" },
               // 第一摆：甩向反方向，纵向先被压扁（落地感）
               { transform: `skewX(${a * 0.62}deg) scale(${1 + s * 0.22}, ${1 - Math.min(s * 0.3, 0.26)})`,
                 offset: 0.2, easing: "ease-in-out" },
@@ -251,10 +278,8 @@
             { duration: 950 }
           );
         } else if (p) {
-          // 纯点击（没拖拽、鼠标没动）：松手这一刻弹一下
-          p.style.animation = "none";
-          void p.offsetWidth; // 强制 reflow 确保动画重启
-          p.style.animation = "";
+          // 纯点击（没拖拽、鼠标没动）：松手这一刻弹一下（从当前形态无缝接续）
+          bounce(p, cur);
         }
         dragging = false;
         // 滞留一会儿再变回圆眼，让短点击也能看清 ><（拉长甩回给更长的滞留）
