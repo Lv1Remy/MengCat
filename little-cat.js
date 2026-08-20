@@ -71,7 +71,7 @@
        而不是入睡前就已在循环中途 */
     .zzs { opacity: 0; pointer-events: none; }
     :host(.lc-sleeping) .zzs { opacity: 1; }
-    .zz { font: 700 16px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
+    .zz { font: 700 32px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
           opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; }
     /* 一颗一颗冒：每颗存活 2.4s，错开 2.4s，同一时刻只有一颗在飘 */
     :host(.lc-sleeping) .zz { animation: zz-float 2.4s ease-in-out infinite; }
@@ -209,9 +209,9 @@
               ${eyeHTML("L", this._eyeState(), f.x, f.y)}
               ${eyeHTML("R", this._eyeState(), f.x, f.y)}
               <g class="zzs" aria-hidden="true">
-                <text class="zz" x="154" y="35">Z</text>
-                <text class="zz zz--2" x="154" y="35">Z</text>
-                <text class="zz zz--3" x="154" y="35">Z</text>
+                <text class="zz" x="164" y="35">Z</text>
+                <text class="zz zz--2" x="164" y="35">Z</text>
+                <text class="zz zz--3" x="164" y="35">Z</text>
               </g>
             </svg>
           </div>

@@ -500,13 +500,13 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
 
             {/* 睡眠时右耳下方（红框位置）垂直向上小幅度冒 Z */}
             <g className="lcat__zzs" aria-hidden="true">
-              <text className="lcat__zz" x="154" y="35">
+              <text className="lcat__zz" x="164" y="35">
                 Z
               </text>
-              <text className="lcat__zz lcat__zz--2" x="154" y="35">
+              <text className="lcat__zz lcat__zz--2" x="164" y="35">
                 Z
               </text>
-              <text className="lcat__zz lcat__zz--3" x="154" y="35">
+              <text className="lcat__zz lcat__zz--3" x="164" y="35">
                 Z
               </text>
             </g>

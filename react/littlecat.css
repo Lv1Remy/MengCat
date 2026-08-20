@@ -65,7 +65,7 @@
 }
 
 .lcat__zz {
-  font: 700 16px/1 system-ui, -apple-system, sans-serif;
+  font: 700 32px/1 system-ui, -apple-system, sans-serif;
   fill: #0a0a0a;
   opacity: 0;
   /* fill-box + 自身中心：scale 时围绕 Z 自己放大，不再被 viewBox
