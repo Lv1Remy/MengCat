@@ -71,7 +71,7 @@
        而不是入睡前就已在循环中途 */
     .zzs { opacity: 0; pointer-events: none; }
     :host(.lc-sleeping) .zzs { opacity: 1; }
-    .zz { font: 700 32px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
+    .zz { font: 700 24px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
           opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; }
     /* 一颗一颗冒：每颗存活 2.4s，错开 2.4s，同一时刻只有一颗在飘 */
     :host(.lc-sleeping) .zz { animation: zz-float 2.4s ease-in-out infinite; }
@@ -80,7 +80,7 @@
     @keyframes zz-float {
       0%   { opacity: 0; transform: translate(0, 0) scale(0.75); }
       30%  { opacity: 0.9; }
-      100% { opacity: 0; transform: translate(0, -16px) scale(1.1); }
+      100% { opacity: 0; transform: translate(0, -26px) scale(1.1); }
     }
     /* 睡着后呼吸放缓 */
     :host(.lc-sleeping) .breathe { animation-duration: 5.6s; }

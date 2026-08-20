@@ -65,7 +65,7 @@
 }
 
 .lcat__zz {
-  font: 700 32px/1 system-ui, -apple-system, sans-serif;
+  font: 700 24px/1 system-ui, -apple-system, sans-serif;
   fill: #0a0a0a;
   opacity: 0;
   /* fill-box + 自身中心：scale 时围绕 Z 自己放大，不再被 viewBox
@@ -89,7 +89,7 @@
 @keyframes lcat-zz-float {
   0%   { opacity: 0; transform: translate(0, 0) scale(0.75); }
   30%  { opacity: 0.9; }
-  100% { opacity: 0; transform: translate(0, -16px) scale(1.1); }
+  100% { opacity: 0; transform: translate(0, -26px) scale(1.1); }
 }
 
 /* 睡着后呼吸放缓 */
