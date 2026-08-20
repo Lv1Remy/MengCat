@@ -70,7 +70,7 @@
     .zzs { opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
     :host(.lc-sleeping) .zzs { opacity: 1; }
     .zz { font: 700 13px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
-          opacity: 0; transform-box: view-box;
+          opacity: 0; transform-box: fill-box; transform-origin: 50% 50%;
           animation: zz-float 3.6s ease-in-out infinite; }
     .zz--2 { animation-delay: 1.2s; }
     .zz--3 { animation-delay: 2.4s; }

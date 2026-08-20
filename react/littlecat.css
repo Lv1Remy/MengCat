@@ -68,7 +68,11 @@
   font: 700 13px/1 system-ui, -apple-system, sans-serif;
   fill: #0a0a0a;
   opacity: 0;
-  transform-box: view-box;
+  /* fill-box + 自身中心：scale 时围绕 Z 自己放大，不再被 viewBox
+     中心点往右推（之前 translate 纯竖直但 scale 参考点是 viewBox
+     中心 x=100，Z 在 x=149 右侧，放大即向右漂移） */
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
   animation: lcat-zz-float 3.6s ease-in-out infinite;
 }
 
