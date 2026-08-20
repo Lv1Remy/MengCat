@@ -40,7 +40,7 @@
     .breathe { width: 100%; height: 100%; transform-origin: 50% 100%;
                animation: breathe 3.4s ease-in-out infinite; }
     .press { width: 100%; height: 100%; transform-origin: 50% 100%;
-             transform: scale(1,1); transition: transform 0.13s ease-out; }
+             animation: press 0.55s cubic-bezier(0.34,1.56,0.64,1); }
     svg { display: block; overflow: visible; width: 100%; height: 100%; }
     .eye { transition: transform 0.36s cubic-bezier(0.34,1.56,0.64,1); }
     .shape { transform-box: view-box;
@@ -137,37 +137,20 @@
           </div>
         </div>`;
 
-      /* 按下 / 松开：按住保持压扁，松开 Q 弹弹回 + >< */
+      /* 按下 / 松开：Q 弹 + >< */
       const root = this.shadowRoot;
       const down = (e) => {
         e.preventDefault();
         clearTimeout(this._linger);
         this._pressed = true;
-        // 快速压扁并保持（transition 0.13s ease-out）
+        // 重启 press 动画（none -> reflow -> 恢复）
         const p = root.querySelector("[data-press]");
-        p.style.transform = "scale(1.07, 0.88)";
+        p.style.animation = "none"; void p.offsetWidth; p.style.animation = "";
         this._renderEyes();
       };
       const up = () => {
         if (!this._pressed) return;
         this._pressed = false;
-        // 松开后 Q 弹弹回（WAAPI：从压扁状态 overshoot 回正）
-        const p = root.querySelector("[data-press]");
-        // 先取消 transition，用 WAAPI 独立控制
-        p.style.transition = "none";
-        p.animate(
-          [
-            { transform: "scale(1.07, 0.88)" },
-            { transform: "scale(0.97, 1.06)", offset: 0.5 },
-            { transform: "scale(1.01, 0.995)", offset: 0.75 },
-            { transform: "scale(1, 1)" },
-          ],
-          { duration: 550, easing: "cubic-bezier(0.34,1.56,0.64,1)", fill: "forwards" }
-        ).onfinish = () => {
-          // 动画结束后恢复默认 transition，下次按下能正常过渡
-          p.style.transition = "";
-          p.style.transform = "";
-        };
         // 滞留 RELEASE_LINGER 再变回来，让短点击也能看清 ><
         clearTimeout(this._linger);
         this._linger = setTimeout(() => this._renderEyes(), RELEASE_LINGER);
