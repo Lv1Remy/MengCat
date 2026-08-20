@@ -21,6 +21,10 @@ const DRAG_THRESHOLD = 8;
 const MAX_STRETCH = 0.9;
 /* 阻力系数：越大越拉不动（位移收益递减，渐近 MAX_STRETCH） */
 const STRETCH_RESIST = 260;
+/* 左右拖拽最大倾斜角（度，绕底部枢轴） */
+const MAX_LEAN = 24;
+/* 倾斜阻力系数：越大越甩不动 */
+const LEAN_RESIST = 220;
 
 /* 眼睛在 viewBox 里的基准位置 */
 const LEFT_EYE = { cx: 72, cy: 92, whiteR: 19, pupilR: 11 };
@@ -34,6 +38,8 @@ const RIGHT_EYE = { cx: 128, cy: 92, whiteR: 19, pupilR: 11 };
  *  - 点击：眼睛变 > <，同时整只猫 Q 弹地一压一弹
  *  - 长按向上拖拽：把猫拉长（阻力渐增，越拉越拉不动），底部固定，
  *    拖拽期间眼睛保持 > <，松手后 Q 弹甩回
+ *  - 长按左右拖拽：绕底部枢轴左右倾斜（阻力渐增），松手后左右回摆衰减，
+ *    模拟真实弹性
  *  - 闲置每 2.6~5 秒自然眨一次眼
  *  - 持续轻微呼吸，按下时大幅 squish + overshoot 弹回
  *  - 软边：SVG 滤镜给剪影加一点点高斯模糊，模拟参考图手绘的柔边
@@ -56,8 +62,12 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
   const pressedRef = useRef(false);
   const lingerRef = useRef<number | undefined>(undefined);
   /** 拖拽拉长状态（不进 state，直接操作 DOM 避免频繁重渲染） */
+  const dragStartXRef = useRef(0);
   const dragStartYRef = useRef(0);
   const draggingRef = useRef(false);
+  /** 松手时的变形量（供回弹动画取当前状态） */
+  const lastStretchRef = useRef(0);
+  const lastLeanRef = useRef(0);
 
   /* ============ 眼神追踪：弹簧式跟随（白眼球平移，瞳孔相对眼球再追一点） ============ */
   useEffect(() => {
@@ -120,39 +130,48 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
     };
   }, []);
 
-  /* ============ 拖拽核心：往上拖拉长（阻力渐增），底部固定 ============ */
-  const applyDrag = useCallback((clientY: number) => {
+  /* ============ 拖拽核心：向上拉拉长、左右拉倾斜（阻力渐增），底部固定 ============ */
+  const applyDrag = useCallback((clientX: number, clientY: number) => {
     const el = pressRef.current;
     if (!el) return;
-    // 往上拖 = 拉长（提着猫头往上拽）
+    // 往上拖 = 拉长（提着猫头往上拽）；左右拖 = 倾斜甩头
     const dy = dragStartYRef.current - clientY;
-    if (!draggingRef.current && dy > DRAG_THRESHOLD) {
+    const dx = clientX - dragStartXRef.current;
+    if (
+      !draggingRef.current &&
+      (dy > DRAG_THRESHOLD || Math.abs(dx) > DRAG_THRESHOLD)
+    ) {
       draggingRef.current = true;
-      // 从点击弹跳切换为拉长：停掉 press 动画
+      // 从点击弹跳切换为拖拽变形：停掉 press 动画
       el.style.animation = "none";
     }
     if (draggingRef.current) {
       const d = Math.max(0, dy);
       // 阻力曲线：位移越大每像素增益越小，拉的越长越拉不动
       const s = (MAX_STRETCH * d) / (d + STRETCH_RESIST);
+      // 倾斜角：同样阻力渐增（绕底部枢轴左右甩）
+      const ad = Math.abs(dx);
+      const ang = (MAX_LEAN * ad) / (ad + LEAN_RESIST) * (dx >= 0 ? 1 : -1);
+      lastStretchRef.current = s;
+      lastLeanRef.current = ang;
       // 纵向拉高、横向按体积守恒变细（transform-origin 在底部，猫脚不动）
-      el.style.transform = `scale(${1 / Math.sqrt(1 + s)}, ${1 + s})`;
+      el.style.transform = `rotate(${ang}deg) scale(${1 / Math.sqrt(1 + s)}, ${1 + s})`;
     }
   }, []);
 
   const onDragMouseMove = useCallback(
-    (ev: MouseEvent) => applyDrag(ev.clientY),
+    (ev: MouseEvent) => applyDrag(ev.clientX, ev.clientY),
     [applyDrag]
   );
   const onDragTouchMove = useCallback(
     (ev: TouchEvent) => {
       if (ev.cancelable) ev.preventDefault(); // 防止页面跟着滚
-      applyDrag(ev.touches[0].clientY);
+      applyDrag(ev.touches[0].clientX, ev.touches[0].clientY);
     },
     [applyDrag]
   );
 
-  /* ============ 松手：拉长后多段 Q 弹甩回，眼睛滞留 >< ============ */
+  /* ============ 松手：左右回摆衰减 + 压扁↔拉高震荡，眼睛滞留 >< ============ */
   const onUp = useCallback(() => {
     window.removeEventListener("mousemove", onDragMouseMove);
     window.removeEventListener("touchmove", onDragTouchMove);
@@ -162,19 +181,41 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
     pressedRef.current = false;
     const el = pressRef.current;
     if (draggingRef.current && el) {
-      // 拉长后松手：从当前状态多段 Q 弹甩回（压扁↔拉高来回衰减）
+      // 拖拽后松手：从当前状态多段 Q 弹甩回 —— 左右回摆衰减（真实弹性）+ 纵向震荡
       const from = getComputedStyle(el).transform;
+      const a = lastLeanRef.current;
+      const s = lastStretchRef.current;
       el.style.transform = "";
       el.animate(
         [
           { transform: from, easing: "cubic-bezier(0.2, 0.8, 0.35, 1)" },
-          { transform: "scale(1.08, 0.74)", offset: 0.2, easing: "ease-in-out" },
-          { transform: "scale(0.95, 1.14)", offset: 0.45, easing: "ease-in-out" },
-          { transform: "scale(1.03, 0.97)", offset: 0.68, easing: "ease-in-out" },
-          { transform: "scale(0.995, 1.01)", offset: 0.85, easing: "ease-in-out" },
-          { transform: "scale(1, 1)" },
+          // 第一摆：甩向反方向，纵向先被压扁（落地感）
+          {
+            transform: `rotate(${-a * 0.62}deg) scale(${1 + s * 0.22}, ${1 - Math.min(s * 0.3, 0.26)})`,
+            offset: 0.2,
+            easing: "ease-in-out",
+          },
+          // 第二摆：弹回原方向，幅度衰减，纵向拉高
+          {
+            transform: `rotate(${a * 0.36}deg) scale(${1 - s * 0.12}, ${1 + s * 0.2})`,
+            offset: 0.44,
+            easing: "ease-in-out",
+          },
+          // 第三摆：更小幅度
+          {
+            transform: `rotate(${-a * 0.17}deg) scale(${1 + s * 0.07}, ${1 - s * 0.1})`,
+            offset: 0.65,
+            easing: "ease-in-out",
+          },
+          // 尾摆：几乎归位
+          {
+            transform: `rotate(${a * 0.06}deg) scale(1, 1)`,
+            offset: 0.84,
+            easing: "ease-in-out",
+          },
+          { transform: "rotate(0deg) scale(1, 1)" },
         ],
-        { duration: 800 }
+        { duration: 950 }
       );
     }
     draggingRef.current = false;
@@ -194,8 +235,11 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
       }
       pressedRef.current = true;
       draggingRef.current = false;
-      dragStartYRef.current =
-        "touches" in e ? e.touches[0].clientY : e.clientY;
+      lastStretchRef.current = 0;
+      lastLeanRef.current = 0;
+      const pt = "touches" in e ? e.touches[0] : e;
+      dragStartXRef.current = pt.clientX;
+      dragStartYRef.current = pt.clientY;
       setPressed(true);
       setPressKey((k) => k + 1);
       // 拖拽时指针会移出猫身范围，监听挂在 window 上

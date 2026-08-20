@@ -13,6 +13,8 @@
  *   - 点击：眼睛变 > <（尖角朝中间）+ 整只猫 Q 弹压扁回弹
  *   - 长按向上拖拽：把猫拉长（阻力渐增，越拉越拉不动），底部固定，
  *     拖拽期间眼睛保持 > <；松手后 Q 弹甩回
+ *   - 长按左右拖拽：绕底部枢轴左右倾斜（阻力渐增），松手后左右回摆衰减，
+ *     模拟真实弹性
  *   - 闲置 2.6~5s 随机眨眼；持续轻微呼吸
  *   - SVG 高斯模糊软边 + 宽墩剪影 + 小三角耳 + 双耳间平顶微拱
  *
@@ -32,6 +34,10 @@
   const MAX_STRETCH = 0.9;
   /* 阻力系数：越大越拉不动（位移收益递减，渐近 MAX_STRETCH） */
   const STRETCH_RESIST = 260;
+  /* 左右拖拽最大倾斜角（度，绕底部枢轴） */
+  const MAX_LEAN = 24;
+  /* 倾斜阻力系数：越大越甩不动 */
+  const LEAN_RESIST = 220;
   const EYES = {
     L: { cx: 72, cy: 92, whiteR: 19, pupilR: 11, bracket: "63,82 85,92 63,102" },
     R: { cx: 128, cy: 92, whiteR: 19, pupilR: 11, bracket: "137,82 115,92 137,102" },
@@ -149,33 +155,40 @@
 
       /* ---------- 点击 Q 弹 / 长按拖拽拉长松手甩回 ---------- */
       const root = this.shadowRoot;
-      let startY = 0;        // 按下时指针 Y
-      let dragging = false;  // 是否已进入拉长模式
+      let startX = 0;       // 按下时指针 X
+      let startY = 0;       // 按下时指针 Y
+      let dragging = false; // 是否已进入拖拽变形模式
+      let lastS = 0;        // 松手时的纵向拉伸量（0~MAX_STRETCH）
+      let lastAng = 0;      // 松手时的倾斜角（度，带符号）
 
       /** 阻力曲线：位移越大每像素增益越小，拉的越长越拉不动 */
-      const stretchOf = (dy) => MAX_STRETCH * (dy / (dy + STRETCH_RESIST));
+      const stretchOf = (d) => MAX_STRETCH * (d / (d + STRETCH_RESIST));
+      const leanOf = (d) => MAX_LEAN * (d / (d + LEAN_RESIST));
 
-      /** 底部固定的拉长：纵向拉高、横向按体积守恒变细 */
-      const applyStretch = (p, dy) => {
-        const s = stretchOf(Math.max(0, dy));
-        p.style.transform = `scale(${1 / Math.sqrt(1 + s)}, ${1 + s})`;
+      /** 底部固定的变形：向上拉 → 拉高+变细（体积守恒）；左右拉 → 绕底部枢轴倾斜 */
+      const applyStretch = (p, dx, dy) => {
+        lastS = stretchOf(Math.max(0, dy));
+        lastAng = dx >= 0 ? leanOf(dx) : -leanOf(-dx);
+        p.style.transform =
+          `rotate(${lastAng}deg) scale(${1 / Math.sqrt(1 + lastS)}, ${1 + lastS})`;
       };
 
       const onDragMove = (ev) => {
         if (!this._pressed) return;
-        const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
-        // 往上拖 = 拉长（提着猫头往上拽）
-        const dy = startY - y;
-        if (!dragging && dy > DRAG_THRESHOLD) {
+        const t = ev.touches ? ev.touches[0] : ev;
+        // 往上拖 = 拉长（提着猫头往上拽）；左右拖 = 倾斜甩头
+        const dy = startY - t.clientY;
+        const dx = t.clientX - startX;
+        if (!dragging && (dy > DRAG_THRESHOLD || Math.abs(dx) > DRAG_THRESHOLD)) {
           dragging = true;
-          // 从点击弹跳切换为拉长：停掉 press 动画（下次按下会重启）
+          // 从点击弹跳切换为拖拽变形：停掉 press 动画（下次按下会重启）
           const p = root.querySelector("[data-press]");
           if (p) p.style.animation = "none";
         }
         if (dragging) {
           if (ev.cancelable) ev.preventDefault(); // 触屏上防止页面跟着滚
           const p = root.querySelector("[data-press]");
-          if (p) applyStretch(p, dy);
+          if (p) applyStretch(p, dx, dy);
         }
       };
 
@@ -184,7 +197,11 @@
         clearTimeout(this._linger);
         this._pressed = true;
         dragging = false;
-        startY = e.touches ? e.touches[0].clientY : e.clientY;
+        lastS = 0;
+        lastAng = 0;
+        const t = e.touches ? e.touches[0] : e;
+        startX = t.clientX;
+        startY = t.clientY;
         // 先按普通点击处理：重启 press 动画（若随后拖拽会切换为拉长）
         const p = root.querySelector("[data-press]");
         p.style.animation = "none"; void p.offsetWidth; p.style.animation = "";
@@ -204,19 +221,28 @@
         this._pressed = false;
         const p = root.querySelector("[data-press]");
         if (dragging && p) {
-          // 拉长后松手：从当前状态多段 Q 弹甩回（压扁↔拉高来回衰减）
+          // 拖拽后松手：从当前状态多段 Q 弹甩回 —— 左右回摆衰减（真实弹性）+ 压扁↔拉高震荡
           const from = getComputedStyle(p).transform;
+          const a = lastAng, s = lastS;
           p.style.transform = "";
           p.animate(
             [
               { transform: from, easing: "cubic-bezier(0.2, 0.8, 0.35, 1)" },
-              { transform: "scale(1.08, 0.74)", offset: 0.2, easing: "ease-in-out" },
-              { transform: "scale(0.95, 1.14)", offset: 0.45, easing: "ease-in-out" },
-              { transform: "scale(1.03, 0.97)", offset: 0.68, easing: "ease-in-out" },
-              { transform: "scale(0.995, 1.01)", offset: 0.85, easing: "ease-in-out" },
-              { transform: "scale(1, 1)" },
+              // 第一摆：甩向反方向，纵向先被压扁（落地感）
+              { transform: `rotate(${-a * 0.62}deg) scale(${1 + s * 0.22}, ${1 - Math.min(s * 0.3, 0.26)})`,
+                offset: 0.2, easing: "ease-in-out" },
+              // 第二摆：弹回原方向，幅度衰减，纵向拉高
+              { transform: `rotate(${a * 0.36}deg) scale(${1 - s * 0.12}, ${1 + s * 0.2})`,
+                offset: 0.44, easing: "ease-in-out" },
+              // 第三摆：更小幅度
+              { transform: `rotate(${-a * 0.17}deg) scale(${1 + s * 0.07}, ${1 - s * 0.1})`,
+                offset: 0.65, easing: "ease-in-out" },
+              // 尾摆：几乎归位
+              { transform: `rotate(${a * 0.06}deg) scale(1, 1)`,
+                offset: 0.84, easing: "ease-in-out" },
+              { transform: "rotate(0deg) scale(1, 1)" },
             ],
-            { duration: 800 }
+            { duration: 950 }
           );
         }
         dragging = false;
