@@ -67,13 +67,15 @@
     @keyframes shape-pop { 0% { transform: scale(0.5); } 60% { transform: scale(1.14); } 100% { transform: scale(1); } }
 
     /* ---------- 睡眠：Z 冒泡（从右耳下方红框位置垂直向上小飘，缓慢） ---------- */
-    .zzs { opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
+    /* 动画只在入睡时挂上：入睡瞬间从 0% 重新开始，Z 依次"冒出来"，
+       而不是入睡前就已在循环中途 */
+    .zzs { opacity: 0; pointer-events: none; }
     :host(.lc-sleeping) .zzs { opacity: 1; }
-    .zz { font: 700 13px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
-          opacity: 0; transform-box: fill-box; transform-origin: 50% 50%;
-          animation: zz-float 3.6s ease-in-out infinite; }
-    .zz--2 { animation-delay: 1.2s; }
-    .zz--3 { animation-delay: 2.4s; }
+    .zz { font: 700 16px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
+          opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; }
+    :host(.lc-sleeping) .zz { animation: zz-float 3.6s ease-in-out infinite; }
+    :host(.lc-sleeping) .zz--2 { animation-delay: 1.2s; }
+    :host(.lc-sleeping) .zz--3 { animation-delay: 2.4s; }
     @keyframes zz-float {
       0%   { opacity: 0; transform: translate(0, 0) scale(0.75); }
       30%  { opacity: 0.9; }
