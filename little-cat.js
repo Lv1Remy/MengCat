@@ -73,9 +73,10 @@
     :host(.lc-sleeping) .zzs { opacity: 1; }
     .zz { font: 700 16px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
           opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; }
-    :host(.lc-sleeping) .zz { animation: zz-float 3.6s ease-in-out infinite; }
-    :host(.lc-sleeping) .zz--2 { animation-delay: 1.2s; }
-    :host(.lc-sleeping) .zz--3 { animation-delay: 2.4s; }
+    /* 一颗一颗冒：每颗存活 2.4s，错开 2.4s，同一时刻只有一颗在飘 */
+    :host(.lc-sleeping) .zz { animation: zz-float 2.4s ease-in-out infinite; }
+    :host(.lc-sleeping) .zz--2 { animation-delay: 2.4s; }
+    :host(.lc-sleeping) .zz--3 { animation-delay: 4.8s; }
     @keyframes zz-float {
       0%   { opacity: 0; transform: translate(0, 0) scale(0.75); }
       30%  { opacity: 0.9; }
@@ -208,9 +209,9 @@
               ${eyeHTML("L", this._eyeState(), f.x, f.y)}
               ${eyeHTML("R", this._eyeState(), f.x, f.y)}
               <g class="zzs" aria-hidden="true">
-                <text class="zz" x="149" y="40">Z</text>
-                <text class="zz zz--2" x="149" y="34">Z</text>
-                <text class="zz zz--3" x="149" y="28">Z</text>
+                <text class="zz" x="154" y="35">Z</text>
+                <text class="zz zz--2" x="154" y="35">Z</text>
+                <text class="zz zz--3" x="154" y="35">Z</text>
               </g>
             </svg>
           </div>

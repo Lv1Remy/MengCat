@@ -78,11 +78,12 @@
 /* 动画只在入睡时挂上：入睡瞬间从 0% 重新开始，Z 依次"冒出来"，
    而不是入睡前就已在循环中途 */
 .lcat--sleeping .lcat__zz {
-  animation: lcat-zz-float 3.6s ease-in-out infinite;
+  /* 一颗一颗冒：每颗存活 2.4s，错开 2.4s，同一时刻只有一颗在飘 */
+  animation: lcat-zz-float 2.4s ease-in-out infinite;
 }
 
-.lcat--sleeping .lcat__zz--2 { animation-delay: 1.2s; }
-.lcat--sleeping .lcat__zz--3 { animation-delay: 2.4s; }
+.lcat--sleeping .lcat__zz--2 { animation-delay: 2.4s; }
+.lcat--sleeping .lcat__zz--3 { animation-delay: 4.8s; }
 
 /* Z 从右耳下方红框位置垂直向上小飘、缓慢淡出（纯竖直，无横向位移） */
 @keyframes lcat-zz-float {
