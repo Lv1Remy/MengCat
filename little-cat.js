@@ -77,7 +77,7 @@
     @keyframes zz-float {
       0%   { opacity: 0; transform: translate(0, 0) scale(0.75); }
       30%  { opacity: 0.9; }
-      100% { opacity: 0; transform: translate(1px, -8px) scale(1.1); }
+      100% { opacity: 0; transform: translate(0, -8px) scale(1.1); }
     }
     /* 睡着后呼吸放缓 */
     :host(.lc-sleeping) .breathe { animation-duration: 5.6s; }
@@ -206,9 +206,9 @@
               ${eyeHTML("L", this._eyeState(), f.x, f.y)}
               ${eyeHTML("R", this._eyeState(), f.x, f.y)}
               <g class="zzs" aria-hidden="true">
-                <text class="zz" x="148" y="50">Z</text>
-                <text class="zz zz--2" x="150" y="44">Z</text>
-                <text class="zz zz--3" x="151" y="38">Z</text>
+                <text class="zz" x="149" y="50">Z</text>
+                <text class="zz zz--2" x="149" y="44">Z</text>
+                <text class="zz zz--3" x="149" y="38">Z</text>
               </g>
             </svg>
           </div>

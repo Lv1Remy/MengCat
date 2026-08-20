@@ -75,11 +75,11 @@
 .lcat__zz--2 { animation-delay: 1.2s; }
 .lcat__zz--3 { animation-delay: 2.4s; }
 
-/* Z 从右耳下方红框位置垂直向上小飘、缓慢淡出（每颗方向一致，错开时间） */
+/* Z 从右耳下方红框位置垂直向上小飘、缓慢淡出（纯竖直，无横向位移） */
 @keyframes lcat-zz-float {
   0%   { opacity: 0; transform: translate(0, 0) scale(0.75); }
   30%  { opacity: 0.9; }
-  100% { opacity: 0; transform: translate(1px, -8px) scale(1.1); }
+  100% { opacity: 0; transform: translate(0, -8px) scale(1.1); }
 }
 
 /* 睡着后呼吸放缓 */
