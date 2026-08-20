@@ -10,7 +10,7 @@
  *
  * 行为：
  *   - 眼睛（白眼球+黑瞳孔分层）弹簧式跟随鼠标
- *   - 点击：眼睛变 > <（尖角朝中间）+ 整只猫 Q 弹压扁回弹
+ *   - 点击：按下眼睛变 > <；松手时若没有拖拽（鼠标未移动），整只猫 Q 弹压扁回弹
  *   - 长按向上拖拽：把猫拉长（阻力渐增，越拉越拉不动），底部固定，
  *     拖拽期间眼睛保持 > <；松手后 Q 弹甩回
  *   - 长按左右拖拽：斜切变形（skewX，底边固定不动，上半身侧移），
@@ -153,7 +153,7 @@
           </div>
         </div>`;
 
-      /* ---------- 点击 Q 弹 / 长按拖拽拉长松手甩回 ---------- */
+      /* ---------- 点击（松手时弹）/ 长按拖拽拉长松手甩回 ---------- */
       const root = this.shadowRoot;
       let startX = 0;       // 按下时指针 X
       let startY = 0;       // 按下时指针 Y
@@ -208,9 +208,7 @@
         const t = e.touches ? e.touches[0] : e;
         startX = t.clientX;
         startY = t.clientY;
-        // 先按普通点击处理：重启 press 动画（若随后拖拽会切换为拉长）
-        const p = root.querySelector("[data-press]");
-        p.style.animation = "none"; void p.offsetWidth; p.style.animation = "";
+        // 按下不播动画（弹跳延迟到松手时），只记录起点、切换眼睛为 ><
         window.addEventListener("mousemove", onDragMove);
         window.addEventListener("touchmove", onDragMove, { passive: false });
         window.addEventListener("mouseup", up);
@@ -252,6 +250,11 @@
             ],
             { duration: 950 }
           );
+        } else if (p) {
+          // 纯点击（没拖拽、鼠标没动）：松手这一刻弹一下
+          p.style.animation = "none";
+          void p.offsetWidth; // 强制 reflow 确保动画重启
+          p.style.animation = "";
         }
         dragging = false;
         // 滞留一会儿再变回圆眼，让短点击也能看清 ><（拉长甩回给更长的滞留）

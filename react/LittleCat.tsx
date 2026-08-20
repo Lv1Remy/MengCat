@@ -35,7 +35,7 @@ const RIGHT_EYE = { cx: 128, cy: 92, whiteR: 19, pupilR: 11 };
  *
  * 行为：
  *  - 眼睛跟着鼠标走（弹簧式跟随，越近越"认真看"）
- *  - 点击：眼睛变 > <，同时整只猫 Q 弹地一压一弹
+ *  - 点击：按下眼睛变 > <；松手时若没有拖拽（鼠标未移动），整只猫 Q 弹地一压一弹
  *  - 长按向上拖拽：把猫拉长（阻力渐增，越拉越拉不动），底部固定，
  *    拖拽期间眼睛保持 > <，松手后 Q 弹甩回
  *  - 长按左右拖拽：斜切变形（skewX，底边固定不动，上半身侧移），
@@ -50,8 +50,6 @@ const RIGHT_EYE = { cx: 128, cy: 92, whiteR: 19, pupilR: 11 };
 export default function LittleCat({ size = 280, className = "" }: LittleCatProps) {
   const [pressed, setPressed] = useState(false);
   const [follow, setFollow] = useState({ x: 0, y: 0 });
-  /** 每次按下递增，让压感 squish 动画每次都重新触发 */
-  const [pressKey, setPressKey] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pressRef = useRef<HTMLDivElement>(null);
@@ -221,6 +219,11 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
         ],
         { duration: 950 }
       );
+    } else if (el) {
+      // 纯点击（没拖拽、鼠标没动）：松手这一刻 Q 弹一下
+      el.style.animation = "none";
+      void el.offsetWidth; // 强制 reflow 确保动画重启
+      el.style.animation = "";
     }
     draggingRef.current = false;
     lingerRef.current = window.setTimeout(() => {
@@ -229,7 +232,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
     }, RELEASE_LINGER);
   }, [onDragMouseMove, onDragTouchMove]);
 
-  /* ============ 按下：先按普通点击弹跳处理，拖拽后切换为拉长 ============ */
+  /* ============ 按下：只记录起点 + 眼睛变 ><（弹跳延迟到松手时） ============ */
   const onDown = useCallback(
     (e: ReactMouseEvent | ReactTouchEvent) => {
       e.preventDefault();
@@ -245,7 +248,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
       dragStartXRef.current = pt.clientX;
       dragStartYRef.current = pt.clientY;
       setPressed(true);
-      setPressKey((k) => k + 1);
+      // 按下不播弹跳动画（延迟到松手时），只切换眼睛为 ><
       // 拖拽时指针会移出猫身范围，监听挂在 window 上
       window.addEventListener("mousemove", onDragMouseMove);
       window.addEventListener("touchmove", onDragTouchMove, { passive: false });
@@ -333,7 +336,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
       onTouchEnd={onUp}
     >
       <div className="lcat__breathe">
-        <div className="lcat__press" key={pressKey} ref={pressRef}>
+        <div className="lcat__press" ref={pressRef}>
           <svg
             viewBox="0 0 200 148"
             width="100%"

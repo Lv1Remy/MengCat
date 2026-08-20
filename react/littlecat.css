@@ -17,7 +17,7 @@
   animation: lcat-breathe 3.4s ease-in-out infinite;
 }
 
-/* 按下时整只猫 Q 弹地压扁再弹回（每次按下 key 变 → 重启动画） */
+/* 点击弹跳：松手时若未拖拽，JS 重启该动画让猫 Q 弹地一压一弹 */
 .lcat__press {
   width: 100%;
   height: 100%;
