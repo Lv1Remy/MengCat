@@ -142,8 +142,10 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
       (dy > DRAG_THRESHOLD || Math.abs(dx) > DRAG_THRESHOLD)
     ) {
       draggingRef.current = true;
-      // 从点击弹跳切换为拖拽变形：停掉 press 动画
+      // 检测到拖拽：停掉点击 Q 弹动画；加一小段 transform 过渡平滑接管，
+      // 从 Q 弹中途状态过渡到拖拽变形，避免突跳卡顿
       el.style.animation = "none";
+      el.style.transition = "transform 0.13s ease-out";
     }
     if (draggingRef.current) {
       const d = Math.max(0, dy);
@@ -180,6 +182,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
     if (!pressedRef.current) return;
     pressedRef.current = false;
     const el = pressRef.current;
+    if (el) el.style.transition = ""; // 拖拽的平滑接管过渡用完即清，不影响后续动画
     if (draggingRef.current && el) {
       // 拖拽后松手：从当前状态多段 Q 弹甩回 —— 左右斜切回摆衰减 + 纵向震荡
       // （正角=向右歪；skewX 参数取负，见 applyDrag）

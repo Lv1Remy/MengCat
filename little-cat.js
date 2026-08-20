@@ -183,9 +183,13 @@
         const dx = t.clientX - startX;
         if (!dragging && (dy > DRAG_THRESHOLD || Math.abs(dx) > DRAG_THRESHOLD)) {
           dragging = true;
-          // 从点击弹跳切换为拖拽变形：停掉 press 动画（下次按下会重启）
           const p = root.querySelector("[data-press]");
-          if (p) p.style.animation = "none";
+          if (p) {
+            // 检测到拖拽：停掉点击 Q 弹动画；同时加一小段 transform 过渡，
+            // 从 Q 弹中途状态平滑接管到拖拽变形，避免突跳卡顿
+            p.style.animation = "none";
+            p.style.transition = "transform 0.13s ease-out";
+          }
         }
         if (dragging) {
           if (ev.cancelable) ev.preventDefault(); // 触屏上防止页面跟着滚
@@ -222,6 +226,7 @@
         if (!this._pressed) return;
         this._pressed = false;
         const p = root.querySelector("[data-press]");
+        if (p) p.style.transition = ""; // 拖拽的平滑接管过渡用完即清，不影响后续动画
         if (dragging && p) {
           // 拖拽后松手：从当前状态多段 Q 弹甩回 —— 左右斜切回摆衰减 + 压扁↔拉高震荡
           // （正角=向右歪；skewX 参数取负，见 applyStretch）
