@@ -25,8 +25,8 @@ const STRETCH_RESIST = 260;
 const MAX_LEAN = 24;
 /* 斜切阻力系数：越大越甩不动 */
 const LEAN_RESIST = 220;
-/* 闲置多久后进入睡眠（毫秒） */
-const SLEEP_AFTER = 60000;
+/* 闲置多久后进入睡眠（毫秒），默认 60000；DEV 临时改 5000 测入睡 */
+const SLEEP_AFTER = 5000;
 
 /* 眼睛在 viewBox 里的基准位置 */
 const LEFT_EYE = { cx: 72, cy: 92, whiteR: 19, pupilR: 11 };
@@ -65,7 +65,7 @@ function squishBounce(el: HTMLDivElement, from?: string) {
  *    拖拽期间眼睛保持 > <，松手后 Q 弹甩回
  *  - 长按左右拖拽：斜切变形（skewX，底边固定不动，上半身侧移），
  *    松手后左右回摆衰减，模拟真实弹性
- *  - 闲置 1 分钟：进入睡眠 —— 眼睛变 - -，右上角冒 Z，呼吸变慢；
+ *  - 闲置 SLEEP_AFTER 毫秒：进入睡眠 —— 眼睛变 - -，右耳旁冒 Z 缓慢飘出，呼吸变慢；
  *    任意鼠标/键盘活动立即醒来（Q 弹一下）
  *  - 闲置每 2.6~5 秒自然眨一次眼
  *  - 持续轻微呼吸，按下时大幅 squish + overshoot 弹回
@@ -498,15 +498,15 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
             {renderEye(leftBlinkRef, LEFT_EYE, "L")}
             {renderEye(rightBlinkRef, RIGHT_EYE, "R")}
 
-            {/* 睡眠时右上角冒 Z */}
+            {/* 睡眠时右耳下方（红框位置）小幅度冒 Z，方向斜上很缓慢 */}
             <g className="lcat__zzs" aria-hidden="true">
-              <text className="lcat__zz" x="156" y="22">
+              <text className="lcat__zz" x="148" y="50">
                 Z
               </text>
-              <text className="lcat__zz lcat__zz--2" x="168" y="10">
+              <text className="lcat__zz lcat__zz--2" x="152" y="44">
                 Z
               </text>
-              <text className="lcat__zz lcat__zz--3" x="180" y="-2">
+              <text className="lcat__zz lcat__zz--3" x="155" y="38">
                 Z
               </text>
             </g>

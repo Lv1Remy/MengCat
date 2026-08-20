@@ -69,17 +69,17 @@
   fill: #0a0a0a;
   opacity: 0;
   transform-box: view-box;
-  animation: lcat-zz-float 2.8s ease-in-out infinite;
+  animation: lcat-zz-float 3.6s ease-in-out infinite;
 }
 
-.lcat__zz--2 { animation-delay: 0.95s; }
-.lcat__zz--3 { animation-delay: 1.9s; }
+.lcat__zz--2 { animation-delay: 1.2s; }
+.lcat__zz--3 { animation-delay: 2.4s; }
 
-/* Z 逐个往上飘、放大、淡出，错开时间形成"冒泡"节奏 */
+/* Z 从右耳下方红框位置小幅斜上飘、缓慢淡出（每颗方向一致，错开时间） */
 @keyframes lcat-zz-float {
-  0%   { opacity: 0; transform: translate(0, 0) scale(0.6); }
-  30%  { opacity: 0.85; }
-  100% { opacity: 0; transform: translate(7px, -12px) scale(1.2); }
+  0%   { opacity: 0; transform: translate(0, 0) scale(0.75); }
+  30%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(3px, -7px) scale(1.1); }
 }
 
 /* 睡着后呼吸放缓 */

@@ -15,11 +15,12 @@
  *     拖拽期间眼睛保持 > <；松手后 Q 弹甩回
  *   - 长按左右拖拽：斜切变形（skewX，底边固定不动，上半身侧移），
  *     松手后左右回摆衰减，模拟真实弹性
- *   - 闲置 1 分钟：进入睡眠 —— 眼睛变 - -，右上角冒 Z，呼吸变慢；
+ *   - 闲置 SLEEP_AFTER 毫秒：进入睡眠 —— 眼睛变 - -，右耳旁冒 Z 缓慢飘出，呼吸变慢；
  *     任意鼠标/键盘活动立即醒来（Q 弹一下）
  *   - 闲置 2.6~5s 随机眨眼；持续轻微呼吸
  *   - SVG 高斯模糊软边 + 宽墩剪影 + 小三角耳 + 双耳间平顶微拱
  *
+ * 注：默认 60000ms（1 分钟），开发阶段可临时改 5000 快速验证睡觉效果。
  * MIT License
  */
 (() => {
@@ -40,8 +41,8 @@
   const MAX_LEAN = 24;
   /* 斜切阻力系数：越大越甩不动 */
   const LEAN_RESIST = 220;
-  /* 闲置多久后进入睡眠（毫秒） */
-  const SLEEP_AFTER = 60000;
+  /* 闲置多久后进入睡眠（毫秒），默认 60000；DEV 临时改 5000 测入睡 */
+  const SLEEP_AFTER = 5000;
   const EYES = {
     L: { cx: 72, cy: 92, whiteR: 19, pupilR: 11, bracket: "63,82 85,92 63,102" },
     R: { cx: 128, cy: 92, whiteR: 19, pupilR: 11, bracket: "137,82 115,92 137,102" },
@@ -65,18 +66,18 @@
     @keyframes breathe { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.028); } }
     @keyframes shape-pop { 0% { transform: scale(0.5); } 60% { transform: scale(1.14); } 100% { transform: scale(1); } }
 
-    /* ---------- 睡眠：Z 冒泡 ---------- */
+    /* ---------- 睡眠：Z 冒泡（从右耳下方红框位置小幅斜上飘，缓慢） ---------- */
     .zzs { opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
     :host(.lc-sleeping) .zzs { opacity: 1; }
     .zz { font: 700 13px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
           opacity: 0; transform-box: view-box;
-          animation: zz-float 2.8s ease-in-out infinite; }
-    .zz--2 { animation-delay: 0.95s; }
-    .zz--3 { animation-delay: 1.9s; }
+          animation: zz-float 3.6s ease-in-out infinite; }
+    .zz--2 { animation-delay: 1.2s; }
+    .zz--3 { animation-delay: 2.4s; }
     @keyframes zz-float {
-      0%   { opacity: 0; transform: translate(0, 0) scale(0.6); }
-      30%  { opacity: 0.85; }
-      100% { opacity: 0; transform: translate(7px, -12px) scale(1.2); }
+      0%   { opacity: 0; transform: translate(0, 0) scale(0.75); }
+      30%  { opacity: 0.9; }
+      100% { opacity: 0; transform: translate(3px, -7px) scale(1.1); }
     }
     /* 睡着后呼吸放缓 */
     :host(.lc-sleeping) .breathe { animation-duration: 5.6s; }
@@ -205,9 +206,9 @@
               ${eyeHTML("L", this._eyeState(), f.x, f.y)}
               ${eyeHTML("R", this._eyeState(), f.x, f.y)}
               <g class="zzs" aria-hidden="true">
-                <text class="zz" x="156" y="22">Z</text>
-                <text class="zz zz--2" x="168" y="10">Z</text>
-                <text class="zz zz--3" x="180" y="-2">Z</text>
+                <text class="zz" x="148" y="50">Z</text>
+                <text class="zz zz--2" x="152" y="44">Z</text>
+                <text class="zz zz--3" x="155" y="38">Z</text>
               </g>
             </svg>
           </div>
