@@ -25,6 +25,8 @@ const STRETCH_RESIST = 260;
 const MAX_LEAN = 24;
 /* 斜切阻力系数：越大越甩不动 */
 const LEAN_RESIST = 220;
+/* 闲置多久后进入睡眠（毫秒） */
+const SLEEP_AFTER = 60000;
 
 /* 眼睛在 viewBox 里的基准位置 */
 const LEFT_EYE = { cx: 72, cy: 92, whiteR: 19, pupilR: 11 };
@@ -63,6 +65,8 @@ function squishBounce(el: HTMLDivElement, from?: string) {
  *    拖拽期间眼睛保持 > <，松手后 Q 弹甩回
  *  - 长按左右拖拽：斜切变形（skewX，底边固定不动，上半身侧移），
  *    松手后左右回摆衰减，模拟真实弹性
+ *  - 闲置 1 分钟：进入睡眠 —— 眼睛变 - -，右上角冒 Z，呼吸变慢；
+ *    任意鼠标/键盘活动立即醒来（Q 弹一下）
  *  - 闲置每 2.6~5 秒自然眨一次眼
  *  - 持续轻微呼吸，按下时大幅 squish + overshoot 弹回
  *  - 软边：SVG 滤镜给剪影加一点点高斯模糊，模拟参考图手绘的柔边
@@ -72,6 +76,7 @@ function squishBounce(el: HTMLDivElement, from?: string) {
  */
 export default function LittleCat({ size = 280, className = "" }: LittleCatProps) {
   const [pressed, setPressed] = useState(false);
+  const [sleeping, setSleeping] = useState(false);
   const [follow, setFollow] = useState({ x: 0, y: 0 });
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -82,6 +87,8 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
   const blinkTimerRef = useRef<number | undefined>(undefined);
   const pressedRef = useRef(false);
   const lingerRef = useRef<number | undefined>(undefined);
+  const sleepingRef = useRef(false);
+  const lastActiveRef = useRef(Date.now());
   /** 拖拽拉长状态（不进 state，直接操作 DOM 避免频繁重渲染） */
   const dragStartXRef = useRef(0);
   const dragStartYRef = useRef(0);
@@ -90,9 +97,30 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
   const lastStretchRef = useRef(0);
   const lastLeanRef = useRef(0);
 
+  /* ============ 睡眠切换：入睡/醒来（醒来 Q 弹一下） ============ */
+  const setSleep = useCallback((on: boolean) => {
+    if (sleepingRef.current === on) return;
+    sleepingRef.current = on;
+    setSleeping(on);
+    if (on) setFollow({ x: 0, y: 0 }); // 睡着眼神归位
+    else if (pressRef.current) squishBounce(pressRef.current); // 醒来打个招呼
+  }, []);
+
+  /* ============ 闲置检测：满 1 分钟无鼠标/键盘活动则入睡 ============ */
+  useEffect(() => {
+    const check = window.setInterval(() => {
+      if (pressedRef.current || sleepingRef.current) return;
+      if (Date.now() - lastActiveRef.current >= SLEEP_AFTER) setSleep(true);
+    }, 1000);
+    return () => window.clearInterval(check);
+  }, [setSleep]);
+
   /* ============ 眼神追踪：弹簧式跟随（白眼球平移，瞳孔相对眼球再追一点） ============ */
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
+      // 任何鼠标移动都算"在用电脑"：刷新活动时间，睡着则立即醒
+      lastActiveRef.current = Date.now();
+      if (sleepingRef.current) setSleep(false);
       if (rafRef.current != null) return;
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = null;
@@ -115,12 +143,18 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
         });
       });
     };
+    const onKeyDown = () => {
+      lastActiveRef.current = Date.now();
+      if (sleepingRef.current) setSleep(false);
+    };
     window.addEventListener("mousemove", onMove);
+    window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("keydown", onKeyDown);
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     };
-  }, []);
+  }, [setSleep]);
 
   /* ============ 周期性眨眼（用 WAAPI 每次都能干净重启） ============ */
   useEffect(() => {
@@ -139,8 +173,11 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
     const schedule = () => {
       blinkTimerRef.current = window.setTimeout(() => {
         if (cancelled) return;
-        doBlink(leftBlinkRef.current);
-        doBlink(rightBlinkRef.current);
+        if (!sleepingRef.current) {
+          // 睡着不眨眼（本身就是 - -）
+          doBlink(leftBlinkRef.current);
+          doBlink(rightBlinkRef.current);
+        }
         schedule();
       }, BLINK_MIN + Math.random() * BLINK_VAR);
     };
@@ -277,6 +314,8 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
   const onDown = useCallback(
     (e: ReactMouseEvent | ReactTouchEvent) => {
       e.preventDefault();
+      lastActiveRef.current = Date.now();
+      if (sleepingRef.current) setSleep(false);
       if (lingerRef.current) {
         clearTimeout(lingerRef.current);
         lingerRef.current = undefined;
@@ -307,7 +346,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
       document.addEventListener("mouseout", onOutOfWindow as EventListener);
       window.addEventListener("blur", onOutOfWindow);
     },
-    [onDragMouseMove, onDragTouchMove, onUp, onOutOfWindow]
+    [onDragMouseMove, onDragTouchMove, onUp, onOutOfWindow, setSleep]
   );
 
   /** 单只眼睛：白眼球 + 黑瞳孔（瞳孔跟随） */
@@ -334,7 +373,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
         >
           <g
             className="lcat__shape"
-            key={pressed ? "b" : "c"}
+            key={pressed ? "b" : sleeping ? "s" : "c"}
             style={{ transformOrigin: `${cfg.cx}px ${cfg.cy}px` }}
           >
             {pressed ? (
@@ -346,6 +385,18 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
                 strokeWidth="6.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+              />
+            ) : sleeping ? (
+              /* 睡眠：- - 横线眼 */
+              <line
+                className="lcat__sleep-line"
+                x1={cfg.cx - 11}
+                y1={cfg.cy}
+                x2={cfg.cx + 11}
+                y2={cfg.cy}
+                stroke="#fff"
+                strokeWidth="6.5"
+                strokeLinecap="round"
               />
             ) : (
               <>
@@ -377,7 +428,7 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
     // 拖拽时指针会移出猫身，所以 onMouseLeave 只在非拖拽时算松手
     <div
       ref={containerRef}
-      className={`lcat ${className}`}
+      className={`lcat ${sleeping ? "lcat--sleeping" : ""} ${className}`}
       style={{ width: size, height: (size * 148) / 200 }}
       onMouseDown={onDown}
       onMouseUp={onUp}
@@ -443,9 +494,22 @@ export default function LittleCat({ size = 280, className = "" }: LittleCatProps
               filter="url(#lcat-soft-edge)"
             />
 
-            {/* 左右眼（白眼球+黑瞳孔独立，按下变 ><） */}
+            {/* 左右眼（白眼球+黑瞳孔独立，按下变 ><，睡眠变 - -） */}
             {renderEye(leftBlinkRef, LEFT_EYE, "L")}
             {renderEye(rightBlinkRef, RIGHT_EYE, "R")}
+
+            {/* 睡眠时右上角冒 Z */}
+            <g className="lcat__zzs" aria-hidden="true">
+              <text className="lcat__zz" x="156" y="22">
+                Z
+              </text>
+              <text className="lcat__zz lcat__zz--2" x="168" y="10">
+                Z
+              </text>
+              <text className="lcat__zz lcat__zz--3" x="180" y="-2">
+                Z
+              </text>
+            </g>
           </svg>
         </div>
       </div>

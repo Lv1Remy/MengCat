@@ -15,6 +15,8 @@
  *     拖拽期间眼睛保持 > <；松手后 Q 弹甩回
  *   - 长按左右拖拽：斜切变形（skewX，底边固定不动，上半身侧移），
  *     松手后左右回摆衰减，模拟真实弹性
+ *   - 闲置 1 分钟：进入睡眠 —— 眼睛变 - -，右上角冒 Z，呼吸变慢；
+ *     任意鼠标/键盘活动立即醒来（Q 弹一下）
  *   - 闲置 2.6~5s 随机眨眼；持续轻微呼吸
  *   - SVG 高斯模糊软边 + 宽墩剪影 + 小三角耳 + 双耳间平顶微拱
  *
@@ -38,6 +40,8 @@
   const MAX_LEAN = 24;
   /* 斜切阻力系数：越大越甩不动 */
   const LEAN_RESIST = 220;
+  /* 闲置多久后进入睡眠（毫秒） */
+  const SLEEP_AFTER = 60000;
   const EYES = {
     L: { cx: 72, cy: 92, whiteR: 19, pupilR: 11, bracket: "63,82 85,92 63,102" },
     R: { cx: 128, cy: 92, whiteR: 19, pupilR: 11, bracket: "137,82 115,92 137,102" },
@@ -60,6 +64,22 @@
              animation: shape-pop 0.42s cubic-bezier(0.34,1.56,0.64,1); }
     @keyframes breathe { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.028); } }
     @keyframes shape-pop { 0% { transform: scale(0.5); } 60% { transform: scale(1.14); } 100% { transform: scale(1); } }
+
+    /* ---------- 睡眠：Z 冒泡 ---------- */
+    .zzs { opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
+    :host(.lc-sleeping) .zzs { opacity: 1; }
+    .zz { font: 700 13px/1 system-ui, -apple-system, sans-serif; fill: #0a0a0a;
+          opacity: 0; transform-box: view-box;
+          animation: zz-float 2.8s ease-in-out infinite; }
+    .zz--2 { animation-delay: 0.95s; }
+    .zz--3 { animation-delay: 1.9s; }
+    @keyframes zz-float {
+      0%   { opacity: 0; transform: translate(0, 0) scale(0.6); }
+      30%  { opacity: 0.85; }
+      100% { opacity: 0; transform: translate(7px, -12px) scale(1.2); }
+    }
+    /* 睡着后呼吸放缓 */
+    :host(.lc-sleeping) .breathe { animation-duration: 5.6s; }
   `;
 
   /* 弹簧缓动 */
@@ -92,6 +112,13 @@
            stroke-linecap="round" stroke-linejoin="round"/>`;
   }
 
+  /** 睡眠时的 - - 横线眼 */
+  function sleepHTML(side) {
+    const c = EYES[side];
+    return `<line x1="${c.cx - 11}" y1="${c.cy}" x2="${c.cx + 11}" y2="${c.cy}"
+          stroke="#fff" stroke-width="6.5" stroke-linecap="round"/>`;
+  }
+
   /** 正常状态的白眼球 + 黑瞳孔 */
   function circlesHTML(side, fx, fy) {
     const c = EYES[side];
@@ -100,13 +127,16 @@
   }
 
   /** 生成单只眼睛的 SVG group HTML（只在初次构建 / 尺寸变化时用） */
-  function eyeHTML(side, pressed, fx, fy) {
+  function eyeHTML(side, state, fx, fy) {
     const c = EYES[side];
-    const inner = pressed ? bracketHTML(side) : circlesHTML(side, fx, fy);
+    const inner =
+      state === "pressed" ? bracketHTML(side) :
+      state === "sleep"   ? sleepHTML(side) :
+                            circlesHTML(side, fx, fy);
     return `
       <g class="eye" data-eye="${side}" style="transform: translate(${fx}px, ${fy}px)">
         <g class="blink" data-blink="${side}" style="transform-origin: ${c.cx}px ${c.cy}px">
-          <g class="shape" data-shape="${side}" data-pressed="${pressed ? 1 : 0}"
+          <g class="shape" data-shape="${side}" data-state="${state}"
              style="transform-origin: ${c.cx}px ${c.cy}px; transform-box: view-box">${inner}</g>
         </g>
       </g>`;
@@ -121,6 +151,9 @@
       super();
       this._follow = { x: 0, y: 0 };
       this._pressed = false;
+      this._sleeping = false;
+      this._lastActive = Date.now();
+      this._sleepCheck = null;
       this._raf = null;
       this._linger = null;
       this._blinkTimer = null;
@@ -132,14 +165,17 @@
       this._build();
       this._bindTracking();
       this._scheduleBlink();
+      this._startIdleWatch();
     }
 
     disconnectedCallback() {
       this._cancelled = true;
       clearTimeout(this._blinkTimer);
       clearTimeout(this._linger);
+      clearInterval(this._sleepCheck);
       if (this._raf) cancelAnimationFrame(this._raf);
       window.removeEventListener("mousemove", this._onMoveBound);
+      window.removeEventListener("keydown", this._onKeyBound);
     }
 
     attributeChangedCallback() {
@@ -166,8 +202,13 @@
                 </filter>
               </defs>
               <path d="${BODY_PATH}" fill="#0a0a0a" filter="url(#lc-soft)"/>
-              ${eyeHTML("L", this._pressed, f.x, f.y)}
-              ${eyeHTML("R", this._pressed, f.x, f.y)}
+              ${eyeHTML("L", this._eyeState(), f.x, f.y)}
+              ${eyeHTML("R", this._eyeState(), f.x, f.y)}
+              <g class="zzs" aria-hidden="true">
+                <text class="zz" x="156" y="22">Z</text>
+                <text class="zz zz--2" x="168" y="10">Z</text>
+                <text class="zz zz--3" x="180" y="-2">Z</text>
+              </g>
             </svg>
           </div>
         </div>`;
@@ -224,6 +265,8 @@
 
       const down = (e) => {
         e.preventDefault();
+        this._lastActive = Date.now();
+        if (this._sleeping) this._setSleep(false);
         clearTimeout(this._linger);
         this._pressed = true;
         dragging = false;
@@ -309,6 +352,9 @@
     /* ---------- 眼神追踪 ---------- */
     _bindTracking() {
       this._onMoveBound = (e) => {
+        // 任何鼠标移动都算"在用电脑"：刷新活动时间，睡着则立即醒
+        this._lastActive = Date.now();
+        if (this._sleeping) this._setSleep(false);
         if (this._raf) return;
         this._raf = requestAnimationFrame(() => {
           this._raf = null;
@@ -326,12 +372,53 @@
           if (!this._pressed) this._renderEyes();
         });
       };
+      this._onKeyBound = () => {
+        this._lastActive = Date.now();
+        if (this._sleeping) this._setSleep(false);
+      };
       window.addEventListener("mousemove", this._onMoveBound);
+      window.addEventListener("keydown", this._onKeyBound);
+    }
+
+    /* ---------- 睡眠：闲置 1 分钟打瞌睡，任意活动醒来 ---------- */
+    _startIdleWatch() {
+      this._lastActive = Date.now();
+      clearInterval(this._sleepCheck);
+      this._sleepCheck = setInterval(() => {
+        if (this._cancelled || this._pressed) return;
+        if (
+          !this._sleeping &&
+          Date.now() - this._lastActive >= SLEEP_AFTER
+        ) {
+          this._setSleep(true);
+        }
+      }, 1000);
+    }
+
+    _setSleep(on) {
+      if (this._sleeping === on) return;
+      this._sleeping = on;
+      this.classList.toggle("lc-sleeping", on);
+      if (on) {
+        this._follow = { x: 0, y: 0 }; // 睡着眼神归位
+      }
+      this._renderEyes();
+      if (!on) {
+        // 醒来：Q 弹一下打个招呼
+        const p = this.shadowRoot.querySelector("[data-press]");
+        if (p) bounce(p);
+      }
+    }
+
+    /** 眼睛当前形态：按下 > < / 睡眠 - - / 正常圆眼 */
+    _eyeState() {
+      return this._pressed ? "pressed" : this._sleeping ? "sleep" : "normal";
     }
 
     /* ---------- 只更新眼睛（不重建 DOM，避免重放 shape-pop 让眼睛变小） ---------- */
     _renderEyes() {
       const f = this._follow;
+      const state = this._eyeState();
       const root = this.shadowRoot;
       for (const side of ["L", "R"]) {
         const eye = root.querySelector(`[data-eye="${side}"]`);
@@ -340,17 +427,17 @@
         eye.style.transform = `translate(${f.x}px, ${f.y}px)`;
 
         const shape = eye.querySelector("[data-shape]");
-        const shapePressed = shape.dataset.pressed === "1";
-        if (this._pressed !== shapePressed) {
-          // 2) 形状切换（圆眼 <-> ><）：换内容并主动重放弹入动画
-          shape.dataset.pressed = this._pressed ? "1" : "0";
-          shape.innerHTML = this._pressed
-            ? bracketHTML(side)
-            : circlesHTML(side, f.x, f.y);
+        if (shape.dataset.state !== state) {
+          // 2) 形态切换（圆眼 <-> >< <-> - -）：换内容并主动重放弹入动画
+          shape.dataset.state = state;
+          shape.innerHTML =
+            state === "pressed" ? bracketHTML(side) :
+            state === "sleep"   ? sleepHTML(side) :
+                                  circlesHTML(side, f.x, f.y);
           shape.style.animation = "none";
           void shape.getBoundingClientRect(); // 强制 reflow，确保动画重启
           shape.style.animation = "";
-        } else if (!this._pressed) {
+        } else if (state === "normal") {
           // 3) 仅更新瞳孔位置（改属性，不触发任何动画重启）
           const pupil = shape.querySelectorAll("circle")[1];
           if (pupil) {
@@ -366,18 +453,20 @@
     _scheduleBlink() {
       const tick = () => {
         if (this._cancelled) return;
-        for (const side of ["L", "R"]) {
-          this.shadowRoot
-            .querySelector(`[data-blink="${side}"]`)
-            ?.animate(
-              [
-                { transform: "scaleY(1)" },
-                { transform: "scaleY(0.08)", offset: 0.45 },
-                { transform: "scaleY(0.08)", offset: 0.55 },
-                { transform: "scaleY(1)" },
-              ],
-              { duration: 170, easing: "ease-in-out" }
-            );
+        if (!this._sleeping) {
+          for (const side of ["L", "R"]) {
+            this.shadowRoot
+              .querySelector(`[data-blink="${side}"]`)
+              ?.animate(
+                [
+                  { transform: "scaleY(1)" },
+                  { transform: "scaleY(0.08)", offset: 0.45 },
+                  { transform: "scaleY(0.08)", offset: 0.55 },
+                  { transform: "scaleY(1)" },
+                ],
+                { duration: 170, easing: "ease-in-out" }
+              );
+          }
         }
         this._blinkTimer = setTimeout(tick, BLINK_MIN + Math.random() * BLINK_VAR);
       };

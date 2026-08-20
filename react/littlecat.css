@@ -45,9 +45,46 @@
   transform-box: view-box;
 }
 
-/* 眼睛形状（月牙 ↔ 括号）每次挂载都 Q 弹地弹一下 */
+/* 眼睛形状（月牙 ↔ 括号 ↔ 睡眠横线）每次挂载都 Q 弹地弹一下 */
 .lcat__shape {
   animation: lcat-shape-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ============================================
+   睡眠：右上角冒 Z + 呼吸放缓
+   ============================================ */
+
+.lcat__zzs {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+
+.lcat--sleeping .lcat__zzs {
+  opacity: 1;
+}
+
+.lcat__zz {
+  font: 700 13px/1 system-ui, -apple-system, sans-serif;
+  fill: #0a0a0a;
+  opacity: 0;
+  transform-box: view-box;
+  animation: lcat-zz-float 2.8s ease-in-out infinite;
+}
+
+.lcat__zz--2 { animation-delay: 0.95s; }
+.lcat__zz--3 { animation-delay: 1.9s; }
+
+/* Z 逐个往上飘、放大、淡出，错开时间形成"冒泡"节奏 */
+@keyframes lcat-zz-float {
+  0%   { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  30%  { opacity: 0.85; }
+  100% { opacity: 0; transform: translate(7px, -12px) scale(1.2); }
+}
+
+/* 睡着后呼吸放缓 */
+.lcat--sleeping .lcat__breathe {
+  animation-duration: 5.6s;
 }
 
 /* ============================================
