@@ -206,9 +206,9 @@
               ${eyeHTML("L", this._eyeState(), f.x, f.y)}
               ${eyeHTML("R", this._eyeState(), f.x, f.y)}
               <g class="zzs" aria-hidden="true">
-                <text class="zz" x="149" y="50">Z</text>
-                <text class="zz zz--2" x="149" y="44">Z</text>
-                <text class="zz zz--3" x="149" y="38">Z</text>
+                <text class="zz" x="149" y="40">Z</text>
+                <text class="zz zz--2" x="149" y="34">Z</text>
+                <text class="zz zz--3" x="149" y="28">Z</text>
               </g>
             </svg>
           </div>
